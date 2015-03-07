@@ -1,0 +1,22 @@
+{
+  "name": "backbone.async",
+  "version": "0.1.0",
+  "description": "Backbone Models meet Promises",
+  "author": "Emmanuel Antico <emmanuel.antico@gmail.com>",
+  "license": "MIT",
+  "main": "dist/backbone.async.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/emaphp/backbone.async"
+  },
+  "dependencies": {
+    "backbone": ">=1.1.2",
+    "underscore": ">=1.5.0"
+  },
+  "devDependencies": {
+    "grunt": "^0.4.5",
+    "grunt-contrib-jshint": "^0.11.0",
+    "grunt-contrib-uglify": "^0.8.0",
+    "jshint": "^2.6.3"
+  }
+}

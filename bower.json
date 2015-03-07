@@ -1,0 +1,33 @@
+{
+  "name": "backbone.async",
+  "version": "0.1.0",
+  "homepage": "https://github.com/emaphp/backbone.async",
+  "authors": [
+    "Emmanuel Antico <emmanuel.antico@gmail.com>"
+  ],
+  "description": "Backbone Models meet Promises",
+  "main": "dist/backbone.async.js",
+  "moduleType": [
+    "amd",
+    "globals",
+    "node"
+  ],
+  "dependencies": {
+    "backbone": ">=1.1.2",
+    "underscore": ">=1.5.0"
+  },
+  "keywords": [
+    "backbone",
+    "model",
+    "async",
+    "promises"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
