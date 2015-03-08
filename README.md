@@ -39,12 +39,19 @@ var contacts = new Contacts();
 
 //fetching a collection
 contacts.fetch()
-.then(function() {
+.then(function(response) {
     console.log('Collection fetched correctly');
-}, function() {
+}, function(response) {
     console.log('Failed to fetch collection');
 });
 ```
+
+Callbacks used with *Collection::fetch* will receive an object containing the following properties:
+
+ * collection: The collection instance.
+ * response: On success, a JSON object with the values received. On error, an XHR instance.
+ * options: Options used for this request.
+
 
 <br/>
 **Backbone.Async.Model**
@@ -53,17 +60,22 @@ var Contact = Backbone.Async.Collection.extend({
     urlRoot: 'http://example.com/contacts'
 });
 
-var contact = new Contact();
-contact.set('id', 1);
+var contact = new Contact({id: 1});
 
 //fetch by id
 contact.fetch()
-.then(function() {
+.then(function(response) {
     console.log('Contact fetched correctly');    
-}, function() {
+}, function(response) {
     console.log('Failed to fetch contact');
 });
 ```
+
+Callbacks used with *Model::fetch/save/destroy* will receive an object containing the following properties:
+
+ * model: The model instance.
+ * response: On success, a JSON object with the values received. On error, an XHR instance.
+ * options: Options used for this request.
 
 
 <br/>

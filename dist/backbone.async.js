@@ -1,5 +1,5 @@
 /*
- * Backbone.Async v0.1.0
+ * Backbone.Async v0.1.1
  * Copyright 2015 Emmanuel Antico
  * This library is distributed under the terms of the MIT license.
  */
@@ -14,16 +14,22 @@
     else
         factory(global, global.Backbone, global._);
 }(this, function(global, Backbone, _) {
-    var overrideCallback = function(callback, resolver) {
+    var overrideCallback = function(callback, resolver, agg) {
         return function(model, response, options) {
             if (callback)
                 callback.apply(model, arguments);
 
+            if (agg._collection)
+                return resolver({
+                    collection: model,
+                    response: response,
+                    options: options
+                });
+            
             resolver({
                 model: model,
                 response: response,
-                options: options,
-                collection: model
+                options: options
             });
         };
     };
@@ -36,7 +42,7 @@
                 attrs = key;
                 options = value;
             }
-            else {
+            else if (key) {
                 (attrs = {})[key] = value;
                 options = _options;
             }
@@ -44,7 +50,7 @@
         else
             options = key;
 
-        options = options ? _.extend({}, obj) : {};
+        options = options ? _.extend({}, options) : {};
         return { attrs: attrs, options: options };
     };
 
@@ -60,8 +66,8 @@
                 var error = options.error;
 
                 return new Promise(function(resolve, reject) {
-                    options.success = overrideCallback(success, resolve);
-                    options.error = overrideCallback(error, reject);
+                    options.success = overrideCallback(success, resolve, agg);
+                    options.error = overrideCallback(error, reject, agg);
                     proto[method].apply(model, method === 'save' ? [attrs, options] : [options]);
                 });
             };
@@ -71,11 +77,11 @@
     };
 
     var buildPrototype = function(Base, methods) {
-        return methods.reduce(wrapMethod(Base.prototype), {});
+        return methods.reduce(wrapMethod(Base.prototype), {_collection: Base === Backbone.Collection});
     };
 
     Backbone.Async = Backbone.Async || {};
-    Backbone.Async.VERSION = '0.1.0';
+    Backbone.Async.VERSION = '0.1.1';
 
     Backbone.Async.Model = Backbone.Model.extend(
         buildPrototype(Backbone.Model, ['fetch', 'save', 'destroy'])
