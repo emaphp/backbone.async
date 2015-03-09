@@ -1,5 +1,5 @@
 /*
- * Backbone.Async v0.1.1
+ * Backbone.Async v0.2.0
  * Copyright 2015 Emmanuel Antico
  * This library is distributed under the terms of the MIT license.
  */
@@ -14,23 +14,23 @@
     else
         factory(global, global.Backbone, global._);
 }(this, function(global, Backbone, _) {
-    var overrideCallback = function(callback, resolver, agg) {
+    var overrideCallback = function(callback, resolver, cb_options) {
         return function(model, response, options) {
             if (callback)
                 callback.apply(model, arguments);
 
-            if (agg._collection)
-                return resolver({
-                    collection: model,
-                    response: response,
-                    options: options
-                });
-            
-            resolver({
-                model: model,
+            var data = {
                 response: response,
                 options: options
-            });
+            };
+
+            //populate data object correctly and invoke resolver
+            data[cb_options.collection ? 'collection' : 'model'] = model;
+            resolver(data);
+
+            //triggers an after:method event
+            if (typeof(options.silent) === 'undefined' || !options.silent)
+                model.trigger('after:' + cb_options.method, data, cb_options.success);
         };
     };
 
@@ -64,11 +64,24 @@
                 var attrs = parsed.attrs;
                 var success = options.success;
                 var error = options.error;
+                var cb_options = {method: method, collection: proto === Backbone.Collection.prototype};
 
                 return new Promise(function(resolve, reject) {
-                    options.success = overrideCallback(success, resolve, agg);
-                    options.error = overrideCallback(error, reject, agg);
-                    proto[method].apply(model, method === 'save' ? [attrs, options] : [options]);
+                    options.success = overrideCallback(success, resolve, _.extend({success: true}, cb_options));
+                    options.error = overrideCallback(error, reject, _.extend({success: false}, cb_options));
+
+                    if (cb_options.collection) {
+                        //if not silent, trigger a before event
+                        if (typeof(options.silent) === 'undefined' || !options.silent)
+                            model.trigger('before:' + method,  {collection: model, options: options});
+                        proto[method].call(model, options);
+                    }
+                    else {
+                        //if not silent, trigger a before event
+                        if (typeof(options.silent) === 'undefined' || !options.silent)
+                            model.trigger('before:' + method,  method === 'save' ? {model: model, options: options, attrs: attrs} : {model: model, options: options});
+                        proto[method].apply(model, method === 'save' ? [attrs, options] : [options]);
+                    }
                 });
             };
 
@@ -77,11 +90,11 @@
     };
 
     var buildPrototype = function(Base, methods) {
-        return methods.reduce(wrapMethod(Base.prototype), {_collection: Base === Backbone.Collection});
+        return methods.reduce(wrapMethod(Base.prototype), {});
     };
 
     Backbone.Async = Backbone.Async || {};
-    Backbone.Async.VERSION = '0.1.1';
+    Backbone.Async.VERSION = '0.2.0';
 
     Backbone.Async.Model = Backbone.Model.extend(
         buildPrototype(Backbone.Model, ['fetch', 'save', 'destroy'])
