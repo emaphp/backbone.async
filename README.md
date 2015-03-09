@@ -17,12 +17,12 @@ Backbone.Async is based on @jsantell's [Backbone-Promised](https://github.com/js
 <br/>
 > Bower
 
-    bower install backbone.async
+    bower install backbone.async --save
 
 <br/>
 > Node
 
-    npm install backbone.async
+    npm install backbone.async --save
 
 
 <br/>
@@ -41,7 +41,8 @@ var contacts = new Contacts();
 contacts.fetch()
 .then(function(data) {
     console.log('Collection fetched correctly');
-}, function(data) {
+})
+.catch(function(data) {
     console.log('Failed to fetch collection');
 });
 ```
@@ -66,7 +67,8 @@ var contact = new Contact({id: 1});
 contact.fetch()
 .then(function(data) {
     console.log('Contact fetched correctly');    
-}, function(data) {
+})
+.catch(function(data) {
     console.log('Failed to fetch contact');
 });
 ```
@@ -112,6 +114,9 @@ obj.listenTo(contacts, 'after:fetch', obj.afterFetch);
 contacts.fetch()
 .then(function(data) {
     console.log('Contacts fetched correctly');
+})
+.catch(function(data) {
+    console.log('Something went wrong');
 });
 ```
 
@@ -145,7 +150,6 @@ var object = {
 };
 
 _.extend(object, Backbone.Events);
-
 object.listenTo(contact, 'before:fetch', object.beforeFetch);
 object.listenTo(contact, 'before:save', object.beforeSave);
 
@@ -154,12 +158,18 @@ contact.fetch()
 .then(function(data) {
     console.log('Contact fetched correctly');
     
+    //update values and save
     contact.set({name: 'emaphp', email: 'emaphp@github.com'});
-    
     contact.save()
     .then(function(data) {
         console.log('Contact saved');
+    })
+    .catch(function(data) {
+        console.log('Something went wrong');
     });
+})
+.catch(function(data) {
+    console.log('Something went wrong');
 });
 ```
 
@@ -168,9 +178,9 @@ The *before:fetch* and *before:destroy* event handlers will receive an object co
  * model: The model instance.
  * options: The options provided.
 
-The *before:save* event handler also includes an additional property named *attrs* with the attributes being saved. All *after* event handlers receive the exact same object provided to the fulfilled and rejection callbacks plus a *success* argument.
+The *before:save* event handler also includes an additional property named *attrs* with the attributes being saved. All *after:event* handlers receive the exact same object provided to the fulfilled and rejection callbacks plus a *success* argument.
 
 <br/>
 ###License
 
-Licensed under the MIT license.
+This library is distributed under the terms of the MIT license.

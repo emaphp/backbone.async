@@ -93,14 +93,16 @@
         return methods.reduce(wrapMethod(Base.prototype), {});
     };
 
-    Backbone.Async = Backbone.Async || {};
-    Backbone.Async.VERSION = '0.2.0';
+    var Async = Backbone.Async = Backbone.Async || {};
+    Async.VERSION = '0.2.0';
 
-    Backbone.Async.Model = Backbone.Model.extend(
+    Async.Model = Backbone.Model.extend(
         buildPrototype(Backbone.Model, ['fetch', 'save', 'destroy'])
     );
 
-    Backbone.Async.Collection = Backbone.Collection.extend(
+    Async.Collection = Backbone.Collection.extend(
         buildPrototype(Backbone.Collection, ['fetch'])
     );
+
+    return Async;
 }));
