@@ -1,19 +1,19 @@
 /*
- * Backbone.Async v0.2.0
+ * Backbone.Async v0.3.0
  * Copyright 2015 Emmanuel Antico
  * This library is distributed under the terms of the MIT license.
  */
 (function(global, factory) {
     if (typeof define === 'function' && define.amd) {
         define(['backbone', 'underscore'], function(Backbone, _) {
-            return factory(global, Backbone, _);
+            return factory(global, Backbone, _, global.Promise);
         });
     }
     else if (typeof exports !== 'undefined')
-        module.exports = factory(global, require('backbone'), require('underscore'));
+        module.exports = factory(global, require('backbone'), require('underscore'), require('promise'));
     else
-        factory(global, global.Backbone, global._);
-}(this, function(global, Backbone, _) {
+        factory(global, global.Backbone, global._, global.Promise);
+}(this, function(global, Backbone, _, PromiseClass) {
     var overrideCallback = function(callback, resolver, cb_options) {
         return function(model, response, options) {
             if (callback)
@@ -66,7 +66,7 @@
                 var error = options.error;
                 var cb_options = {method: method, collection: proto === Backbone.Collection.prototype};
 
-                return new Promise(function(resolve, reject) {
+                return new PromiseClass(function(resolve, reject) {
                     options.success = overrideCallback(success, resolve, _.extend({success: true}, cb_options));
                     options.error = overrideCallback(error, reject, _.extend({success: false}, cb_options));
 
@@ -94,7 +94,7 @@
     };
 
     var Async = Backbone.Async = Backbone.Async || {};
-    Async.VERSION = '0.2.0';
+    Async.VERSION = '0.3.0';
 
     Async.Model = Backbone.Model.extend(
         buildPrototype(Backbone.Model, ['fetch', 'save', 'destroy'])
