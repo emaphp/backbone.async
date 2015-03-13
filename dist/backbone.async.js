@@ -6,14 +6,14 @@
 (function(global, factory) {
     if (typeof define === 'function' && define.amd) {
         define(['backbone', 'underscore'], function(Backbone, _) {
-            return factory(global, Backbone, _, global.Promise);
+            return factory(global, Backbone, _);
         });
     }
     else if (typeof exports !== 'undefined')
-        module.exports = factory(global, require('backbone'), require('underscore'), require('promise'));
+        module.exports = factory(global, require('backbone'), require('underscore'));
     else
-        factory(global, global.Backbone, global._, global.Promise);
-}(this, function(global, Backbone, _, PromiseClass) {
+        factory(global, global.Backbone, global._);
+}(this, function(global, Backbone, _) {
     var overrideCallback = function(callback, resolver, cb_options) {
         return function(model, response, options) {
             if (callback)
@@ -66,7 +66,7 @@
                 var error = options.error;
                 var cb_options = {method: method, collection: proto === Backbone.Collection.prototype};
 
-                return new PromiseClass(function(resolve, reject) {
+                return new Promise(function(resolve, reject) {
                     options.success = overrideCallback(success, resolve, _.extend({success: true}, cb_options));
                     options.error = overrideCallback(error, reject, _.extend({success: false}, cb_options));
 

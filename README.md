@@ -4,11 +4,13 @@ Backbone Models meet Promises
 <br/>
 ###About
 
+<br/>
 Backbone.Async introduces a Model and a Collection class that wrap their sync methods into a Promise.
 
 <br/>
 ###Acknowledgement
 
+<br/>
 Backbone.Async is based on @jsantell's [Backbone-Promised](https://github.com/jsantell/backbone-promised "").
 
 <br/>
@@ -24,6 +26,12 @@ Backbone.Async is based on @jsantell's [Backbone-Promised](https://github.com/js
 
     npm install backbone.async --save
 
+
+<br/>
+###Polyfill
+
+<br/>
+Browsers not supporting Promises should use a polyfill. You can find one [here](https://github.com/taylorhakes/promise-polyfill "").
 
 <br/>
 ###Examples
