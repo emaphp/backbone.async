@@ -1,16 +1,12 @@
 describe("ASync.Model tests", function() {
     var server = sinon.fakeServer.create();
 
-    describe('Default values', function() {
-        it('attributes should be equal', function() {
-            var contact = new FIXTURES.Contact({id: 1});
-            expect(contact.get('id')).to.equal(1);
-            expect(contact.get('name')).to.equal('emaphp');
-        });
+    after(function() {
+        server.restore();
     });
 
     describe('Fetch test', function() {
-        it('must equal', function() {
+        it('must equal attributes', function() {
             server.respondWith(
                 'GET',
                 '/contacts/1',
@@ -29,9 +25,7 @@ describe("ASync.Model tests", function() {
             expect(contact.get('name')).to.equal('Emmanuel');
             expect(contact.get('surname')).to.equal('Antico');
         });
-    });
 
-    describe('Then test', function() {
         it('must call then', function(done) {
             server.respondWith(
                 'GET',
@@ -67,9 +61,7 @@ describe("ASync.Model tests", function() {
             .catch(function() {});
             server.respond();
         });
-    });
 
-    describe('Options test', function() {
         it('must match options', function(done) {
             server.respondWith(
                 'GET',
@@ -98,10 +90,8 @@ describe("ASync.Model tests", function() {
             .catch(function() {});
             server.respond();
         });
-    });
 
-    describe('Cascade test', function() {
-        it('must call thenable', function(done) {
+        it('must call callbacks in order', function(done) {
             server.respondWith(
                 'GET',
                 '/contacts/4',
@@ -112,7 +102,7 @@ describe("ASync.Model tests", function() {
                 ]
             );
 
-            var contact = new FIXTURES.Contact({id: 1});
+            var contact = new FIXTURES.Contact({id: 4});
             var callback1 = sinon.spy();
             var callback2 = sinon.spy();
 
@@ -124,11 +114,158 @@ describe("ASync.Model tests", function() {
                 expect(callback1.calledOnce).to.be.true;
                 expect(callback2.called).to.be.true;
                 expect(callback2.calledOnce).to.be.true;
+                expect(callback1.calledBefore(callback2)).to.be.true;
                 done();
             })
             .catch(function() {});
 
             server.respond();
-        });        
+        });
+    });
+
+    describe('Fetch fail test', function() {
+        it('must call catch', function(done) {
+            server.respondWith(
+                'GET',
+                '/notes/1',
+                [
+                    404,
+                    null,
+                    ''
+                ]
+            );
+
+            var note = new FIXTURES.Note({id: 1});
+            note.fetch()
+            .then(function() {
+            })
+            .catch(function(data) {
+                expect(data).to.be.a('object');
+                expect(data).to.have.property('model');
+                expect(data).to.have.property('response');
+                expect(data).to.have.property('options');
+                expect(data.model).to.be.deep.equal(note);
+                expect(data.response).to.be.a('object');
+                expect(data.response.status).to.equal(404)
+                expect(data.response.statusText).to.equal("Not Found");
+                done();
+            });
+
+            server.respond();
+        });
+
+        it('must receive options', function(done) {
+            server.respondWith(
+                'GET',
+                '/notes/2',
+                [
+                    404,
+                    null,
+                    ''
+                ]
+            );
+
+            var note = new FIXTURES.Note({id: 2});
+            note.fetch({test: true, silent: false})
+            .then(function() {
+            })
+            .catch(function(data) {
+                var options = data.options;
+                expect(options).to.have.property('test');
+                expect(options).to.have.property('silent');
+                expect(options.test).to.be.true;
+                expect(options.silent).to.be.false;
+                done();
+            });
+            server.respond();
+        });
+
+        it('must call event handlers', function(done) {
+            server.respondWith(
+                'GET',
+                '/notes/3',
+                [
+                    500,
+                    null,
+                    ''
+                ]
+            );
+
+            var obj = _.extend({}, Backbone.Events);
+            var beforeCallback = sinon.spy();
+            var afterCallback = sinon.spy();
+            var note = new FIXTURES.Note({id: 3});
+            obj.listenTo(note, 'before:fetch', beforeCallback);
+            obj.listenTo(note, 'after:fetch', afterCallback);
+
+            note.fetch({test: true, silent: false})
+            .then(function() {
+            })
+            .catch(function(data) {
+                expect(beforeCallback.called).to.be.true;
+                expect(afterCallback.called).to.be.true;
+                expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
+
+                var dataArg = beforeCallback.args[0][0];
+                expect(dataArg).to.be.a('object');
+                expect(dataArg).to.have.property('model');
+                expect(dataArg).to.have.property('options');
+                expect(dataArg.model).to.be.deep.equal(note);
+                expect(dataArg.options).to.have.property('test');
+                expect(dataArg.options).to.have.property('silent');
+                expect(dataArg.options.test).to.be.true;
+                expect(dataArg.options.silent).to.be.false;
+
+                var dataArg = afterCallback.args[0][0];
+                expect(dataArg).to.be.a('object');
+                expect(dataArg).to.have.property('model');
+                expect(dataArg).to.have.property('options');
+                expect(dataArg).to.have.property('response');
+                expect(dataArg.model).to.be.deep.equal(note);
+                expect(dataArg.options).to.have.property('test');
+                expect(dataArg.options).to.have.property('silent');
+                expect(dataArg.options.test).to.be.true;
+                expect(dataArg.options.silent).to.be.false;
+                expect(dataArg.response.status).to.equal(500);
+                expect(dataArg.response.statusText).to.equal("Internal Server Error");
+
+                var success = afterCallback.args[0][1];
+                expect(success).to.be.false;
+
+                done();
+            });
+
+            server.respond();
+        });
+
+        it('must not call event handlers', function(done) {
+            server.respondWith(
+                'GET',
+                '/notes/4',
+                [
+                    500,
+                    null,
+                    ''
+                ]
+            );
+
+            var obj = _.extend({}, Backbone.Events);
+            var beforeCallback = sinon.spy();
+            var afterCallback = sinon.spy();
+            var note = new FIXTURES.Note({id: 4});
+            obj.listenTo(note, 'before:fetch', beforeCallback);
+            obj.listenTo(note, 'after:fetch', afterCallback);
+
+            note.fetch({test: false, silent: true})
+            .then(function() {
+            })
+            .catch(function(data) {
+                expect(beforeCallback.called).to.be.false;
+                expect(afterCallback.called).to.be.false;
+                done();
+            });
+
+            server.respond();
+        });
     });
 });
