@@ -1,4 +1,4 @@
-describe("ASync.Model tests", function() {
+describe("ASync.Collection tests", function() {
     before(function() {
         server = sinon.fakeServer.create();
     });
@@ -7,86 +7,78 @@ describe("ASync.Model tests", function() {
         server.restore();
     });
 
-    describe('Fetch test', function() {
-        it('must equal attributes', function() {
+    describe('Fetch tests', function() {
+        it('must match elements', function() {
             server.respondWith(
                 'GET',
-                '/contacts/1',
+                '/contacts',
                 [
                     200,
                     {"Content-Type": "application/json"},
-                    JSON.stringify({ id: 1, name: "Emmanuel", surname: "Antico"})
+                    JSON.stringify([{id: 1}, {id: 2}, {id: 3}])
                 ]
             );
 
-            var contact = new FIXTURES.Contact({id: 1});
-            contact.fetch();
+            var contacts = new FIXTURES.Contacts();
+            contacts.fetch();
             server.respond();
+            expect(contacts.length).to.equal(3);
 
+            var contact = contacts.get(1);
             expect(contact.get('id')).to.equal(1);
-            expect(contact.get('name')).to.equal('Emmanuel');
-            expect(contact.get('surname')).to.equal('Antico');
         });
 
-        it('must call then', function(done) {
+        it('must call then', function() {
             server.respondWith(
                 'GET',
-                '/contacts/2',
+                '/contacts',
                 [
                     200,
                     {"Content-Type": "application/json"},
-                    JSON.stringify({ id: 2, name: "Emmanuel", surname: "Antico"})
+                    JSON.stringify([{id: 1}, {id: 2}, {id: 3}])
                 ]
             );
 
-            var contact = new FIXTURES.Contact({id: 2});
-
-            contact.fetch({test: true, silent:false}).
-            then(function(data) {
+            var contacts = new FIXTURES.Contacts();
+            contacts.fetch({test: true, silent:false})
+            .then(function(data) {
                 expect(data).to.be.a('object');
-                expect(data).to.have.property('model');
+                expect(data).to.have.property('collection');
                 expect(data).to.have.property('response');
                 expect(data).to.have.property('options');
-                expect(data.model).to.be.deep.equal(contact);
+                expect(data.collection).to.be.deep.equal(contacts);
+                expect(data.collection.length).to.equal(3);
 
-                var attrs = data.model.attributes;
-                expect(attrs).to.have.property('id');
-                expect(attrs).to.have.property('name');
-                expect(attrs).to.have.property('surname');
+                expect(data.response).to.be.a('array');
+                expect(data.response.length).to.equal(3);
 
-                var response = data.response;
-                expect(response).to.be.deep.equal({ id: 2, name: "Emmanuel", surname: "Antico"});
-                expect(response).to.be.deep.equal(data.model.attributes);
-
-                expect(data.options).to.be.a('object');
-                expect(data.options).to.have.property('test');
-                expect(data.options).to.have.property('silent');
-
+                expect(data.options).is.a('object');
                 expect(data.options.test).to.be.true;
                 expect(data.options.silent).to.be.false;
 
                 done();
             })
             .catch(function(err) { done(err); });
+
             server.respond();
         });
 
         it('must call callbacks in order', function(done) {
             server.respondWith(
                 'GET',
-                '/contacts/4',
+                '/contacts',
                 [
                     200,
                     {"Content-Type": "application/json"},
-                    JSON.stringify({ id: 4, name: "Emmanuel", surname: "Antico"})
+                    JSON.stringify([{id: 1}, {id: 2}, {id: 3}])
                 ]
             );
 
-            var contact = new FIXTURES.Contact({id: 4});
+            var contacts = new FIXTURES.Contacts();
             var callback1 = sinon.spy();
             var callback2 = sinon.spy();
 
-            contact.fetch()
+            contacts.fetch()
             .then(callback1)
             .then(callback2)
             .then(function(data) {
@@ -105,22 +97,22 @@ describe("ASync.Model tests", function() {
         it('must call event handlers', function(done) {
             server.respondWith(
                 'GET',
-                '/contacts/5',
+                '/contacts',
                 [
                     200,
                     {"Content-Type": "application/json"},
-                    JSON.stringify({ id: 5, name: "Emmanuel", surname: "Antico"})
+                    JSON.stringify([{id: 1}, {id: 2}, {id: 3}])
                 ]
             );
 
             var obj = _.extend({}, Backbone.Events);
             var beforeCallback = sinon.spy();
             var afterCallback = sinon.spy();
-            var contact = new FIXTURES.Contact({id: 5});
-            obj.listenTo(contact, 'before:fetch', beforeCallback);
-            obj.listenTo(contact, 'after:fetch', afterCallback);
+            var contacts = new FIXTURES.Contacts();
+            obj.listenTo(contacts, 'before:fetch', beforeCallback);
+            obj.listenTo(contacts, 'after:fetch', afterCallback);
 
-            contact.fetch({test: true, silent:false})
+            contacts.fetch({test: true, silent:false})
             .then(function(data) {
                 expect(beforeCallback.called).to.be.true;
                 expect(afterCallback.called).to.be.true;
@@ -128,9 +120,9 @@ describe("ASync.Model tests", function() {
 
                 var dataArg = beforeCallback.args[0][0];
                 expect(dataArg).to.be.a('object');
-                expect(dataArg).to.have.property('model');
+                expect(dataArg).to.have.property('collection');
                 expect(dataArg).to.have.property('options');
-                expect(dataArg.model).to.be.deep.equal(contact);
+                expect(dataArg.collection).to.be.deep.equal(contacts);
                 expect(dataArg.options).to.have.property('test');
                 expect(dataArg.options).to.have.property('silent');
                 expect(dataArg.options.test).to.be.true;
@@ -138,45 +130,46 @@ describe("ASync.Model tests", function() {
 
                 dataArg = afterCallback.args[0][0];
                 expect(dataArg).to.be.a('object');
-                expect(dataArg).to.have.property('model');
+                expect(dataArg).to.have.property('collection');
                 expect(dataArg).to.have.property('options');
                 expect(dataArg).to.have.property('response');
-                expect(dataArg.model).to.be.deep.equal(contact);
-                expect(dataArg.response).to.be.deep.equal(dataArg.model.attributes);
+                expect(dataArg.collection).to.be.deep.equal(contacts);
+                expect(dataArg.collection.length).to.equal(3);
                 expect(dataArg.options).to.have.property('test');
                 expect(dataArg.options).to.have.property('silent');
                 expect(dataArg.options.test).to.be.true;
                 expect(dataArg.options.silent).to.be.false;
+                expect(dataArg.response).to.be.a('array');
+                expect(dataArg.response.length).to.equal(3);
 
                 var success = afterCallback.args[0][1];
                 expect(success).to.be.true;
-                
                 done();
             })
             .catch(function(err) { done(err); });
 
-            server.respond();   
+            server.respond();
         });
 
         it('must not call event handlers', function(done) {
             server.respondWith(
                 'GET',
-                '/contacts/6',
+                '/contacts',
                 [
                     200,
                     {"Content-Type": "application/json"},
-                    JSON.stringify({ id: 6, name: "Emmanuel", surname: "Antico"})
+                    JSON.stringify([{id: 1}, {id: 2}, {id: 3}])
                 ]
             );
 
             var obj = _.extend({}, Backbone.Events);
             var beforeCallback = sinon.spy();
             var afterCallback = sinon.spy();
-            var contact = new FIXTURES.Contact({id: 6});
-            obj.listenTo(contact, 'before:fetch', beforeCallback);
-            obj.listenTo(contact, 'after:fetch', afterCallback);
+            var contacts = new FIXTURES.Contacts();
+            obj.listenTo(contacts, 'before:fetch', beforeCallback);
+            obj.listenTo(contacts, 'after:fetch', afterCallback);
 
-            contact.fetch({test: false, silent: true})
+            contacts.fetch({test: false, silent: true})
             .then(function(data) {
                 expect(beforeCallback.called).to.be.false;
                 expect(afterCallback.called).to.be.false;
@@ -188,11 +181,11 @@ describe("ASync.Model tests", function() {
         });
     });
 
-    describe('Fetch fail test', function() {
+    describe('Fetch fail tests', function() {
         it('must call catch', function(done) {
             server.respondWith(
                 'GET',
-                '/notes/1',
+                '/notes',
                 [
                     404,
                     null,
@@ -200,31 +193,36 @@ describe("ASync.Model tests", function() {
                 ]
             );
 
-            var note = new FIXTURES.Note({id: 1});
-            note.fetch({test: true, silent: false})
+            var notes = new FIXTURES.Notes();
+
+            notes.fetch({test: true, silent: false})
             .then(function() {
             })
             .catch(function(data) {
                 expect(data).to.be.a('object');
-                expect(data).to.have.property('model');
+                
+                expect(data).to.have.property('collection');
                 expect(data).to.have.property('response');
                 expect(data).to.have.property('options');
-                expect(data.model).to.be.deep.equal(note);
+
+                expect(data.collection).to.be.deep.equal(notes);
                 expect(data.response).to.be.a('object');
                 expect(data.response.status).to.equal(404);
                 expect(data.response.statusText).to.equal("Not Found");
 
-                expect(data.options).to.have.property('test');
-                expect(data.options).to.have.property('silent');
-                expect(data.options.test).to.be.true;
-                expect(data.options.silent).to.be.false;
+                var options = data.options;
+                expect(options).to.have.property('test');
+                expect(options).to.have.property('silent');
+                expect(options.test).to.be.true;
+                expect(options.silent).to.be.false;
+
                 done();
             });
 
             server.respond();
         });
 
-        it('must call event handlers', function(done) {
+        it('must call event handlers', function() {
             server.respondWith(
                 'GET',
                 '/notes/3',
@@ -238,11 +236,11 @@ describe("ASync.Model tests", function() {
             var obj = _.extend({}, Backbone.Events);
             var beforeCallback = sinon.spy();
             var afterCallback = sinon.spy();
-            var note = new FIXTURES.Note({id: 3});
-            obj.listenTo(note, 'before:fetch', beforeCallback);
-            obj.listenTo(note, 'after:fetch', afterCallback);
+            var notes = new FIXTURES.Notes();
+            obj.listenTo(notes, 'before:fetch', beforeCallback);
+            obj.listenTo(notes, 'after:fetch', afterCallback);
 
-            note.fetch({test: true, silent: false})
+            notes.fetch({test: true, silent: false})
             .then(function() {
             })
             .catch(function(data) {
@@ -252,9 +250,9 @@ describe("ASync.Model tests", function() {
 
                 var dataArg = beforeCallback.args[0][0];
                 expect(dataArg).to.be.a('object');
-                expect(dataArg).to.have.property('model');
+                expect(dataArg).to.have.property('collection');
                 expect(dataArg).to.have.property('options');
-                expect(dataArg.model).to.be.deep.equal(note);
+                expect(dataArg.collection).to.be.deep.equal(notes);
                 expect(dataArg.options).to.have.property('test');
                 expect(dataArg.options).to.have.property('silent');
                 expect(dataArg.options.test).to.be.true;
@@ -262,10 +260,10 @@ describe("ASync.Model tests", function() {
 
                 dataArg = afterCallback.args[0][0];
                 expect(dataArg).to.be.a('object');
-                expect(dataArg).to.have.property('model');
+                expect(dataArg).to.have.property('collection');
                 expect(dataArg).to.have.property('options');
                 expect(dataArg).to.have.property('response');
-                expect(dataArg.model).to.be.deep.equal(note);
+                expect(dataArg.collection).to.be.deep.equal(notes);
                 expect(dataArg.options).to.have.property('test');
                 expect(dataArg.options).to.have.property('silent');
                 expect(dataArg.options.test).to.be.true;
@@ -285,7 +283,7 @@ describe("ASync.Model tests", function() {
         it('must not call event handlers', function(done) {
             server.respondWith(
                 'GET',
-                '/notes/4',
+                '/notes',
                 [
                     500,
                     null,
@@ -296,11 +294,11 @@ describe("ASync.Model tests", function() {
             var obj = _.extend({}, Backbone.Events);
             var beforeCallback = sinon.spy();
             var afterCallback = sinon.spy();
-            var note = new FIXTURES.Note({id: 4});
-            obj.listenTo(note, 'before:fetch', beforeCallback);
-            obj.listenTo(note, 'after:fetch', afterCallback);
+            var notes = new FIXTURES.Notes();
+            obj.listenTo(notes, 'before:fetch', beforeCallback);
+            obj.listenTo(notes, 'after:fetch', afterCallback);
 
-            note.fetch({test: false, silent: true})
+            notes.fetch({test: false, silent: true})
             .then(function() {
             })
             .catch(function(data) {
