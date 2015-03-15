@@ -309,5 +309,30 @@ describe("ASync.Collection tests", function() {
 
             server.respond();
         });
+
+        it('must throw error', function(done) {
+            server.respondWith(
+                'GET',
+                '/notes',
+                [
+                    200,
+                    null,
+                    JSON.stringify([{id: 1}, {id: 2}, {id: 3}])
+                ]
+            );
+
+            var notes = new FIXTURES.Notes();
+
+            notes.fetch()
+            .then(function(data) {
+                throw new Error();
+            })
+            .catch(function(err) {
+                expect(_.isError(err)).to.be.true;
+                done();
+            });
+
+            server.respond();
+        });
     });
 });

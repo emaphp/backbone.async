@@ -51,7 +51,10 @@ contacts.fetch()
     console.log('Collection fetched correctly');
 })
 .catch(function(data) {
-    console.log('Failed to fetch collection');
+    if (_.isError(data))
+        console.error(data)
+    else
+        console.log('Failed to fetch collection');
 });
 ```
 
@@ -77,7 +80,10 @@ contact.fetch()
     console.log('Contact fetched correctly');    
 })
 .catch(function(data) {
-    console.log('Failed to fetch contact');
+    if (_.isError(data))
+        console.error(data)
+    else
+        console.log('Failed to fetch contact');
 });
 ```
 
