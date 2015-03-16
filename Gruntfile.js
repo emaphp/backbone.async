@@ -66,7 +66,12 @@ module.exports = function(grunt) {
     grunt.loadNpmTasks('grunt-contrib-uglify');
     grunt.loadNpmTasks('grunt-contrib-jshint');
 
+    //copies required libraries for testing
     grunt.registerTask('vendor', ['copy:jquery', 'copy:underscore', 'copy:backbone', 'copy:mocha', 'copy:chai', 'copy:promise']);
+
+    //applies jshint to project files
     grunt.registerTask('test', ['jshint']);
+
+    //minifies library
     grunt.registerTask('release', ['jshint', 'uglify:dist']);
 };

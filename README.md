@@ -153,7 +153,7 @@ var Contact = Backbone.Async.Contact.extend({
 var contact = new Contact({id: 1});
 
 //setup event listener
-var object = {
+var obj = {
     beforeFetch: function(data) {
         console.log('Contact is being fetched...');
     },
@@ -163,9 +163,9 @@ var object = {
     }
 };
 
-_.extend(object, Backbone.Events);
-object.listenTo(contact, 'before:fetch', object.beforeFetch);
-object.listenTo(contact, 'before:save', object.beforeSave);
+_.extend(obj, Backbone.Events);
+obj.listenTo(contact, 'before:fetch', obj.beforeFetch);
+obj.listenTo(contact, 'before:save', obj.beforeSave);
 
 //fetch contact
 contact.fetch()
@@ -192,7 +192,7 @@ The *before:fetch* and *before:destroy* event handlers will receive an object co
  * model: The model instance.
  * options: The options provided.
 
-The *before:save* event handler also includes an additional property named *attrs* with the attributes being saved. All *after:event* handlers receive the exact same object provided to the fulfilled and rejection callbacks plus a *success* argument.
+The *before:save* event handler argument also includes an additional property named *attrs* with the attributes being saved. All *after:[event]* handlers receive the exact same object provided to the fulfilled and rejection callbacks plus a *success* argument.
 
 <br/>
 ###License

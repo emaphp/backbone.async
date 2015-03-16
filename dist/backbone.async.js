@@ -1,5 +1,5 @@
 /*
- * Backbone.Async v0.3.0
+ * Backbone.Async v1.0.0
  * Copyright 2015 Emmanuel Antico
  * This library is distributed under the terms of the MIT license.
  */
@@ -94,7 +94,7 @@
     };
 
     var Async = Backbone.Async = Backbone.Async || {};
-    Async.VERSION = '0.3.0';
+    Async.VERSION = '1.0.0';
 
     Async.Model = Backbone.Model.extend(
         buildPrototype(Backbone.Model, ['fetch', 'save', 'destroy'])
