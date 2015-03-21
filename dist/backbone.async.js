@@ -135,39 +135,35 @@
             if (!this.Collection)
                 throw new Error('No Collection class defined');
 
+            options = options || {};
             var self = this;
             var mustTrigger = (typeof(options.silent) === 'undefined') || !options.silent;
 
             return new Promise(function(resolve, reject) {
-                self.collection = new self.Collection();
-                if (mustTrigger)
-                    self.trigger('before:fetch', self.collection, options);            
-                self.collection.fetch(options || {})
+                if (!self.collection) self.collection = new self.Collection();
+                if (mustTrigger) self.trigger('before:fetch', { collection: self.collection, options: options});
+                self.collection.fetch(options)
                 .then(function(data) {
-                    if (mustTrigger)
-                        self.trigger('after:fetch', data, true);
+                    if (mustTrigger) self.trigger('after:fetch', data, true);
                     self.isLoaded = true;
                     resolve(data);
                 })
                 .catch(function(data) {
-                    if (mustTrigger)
-                        self.trigger('after:fetch', data, false);
+                    if (mustTrigger) self.trigger('after:fetch', data, false);
                     reject(data);
                 });
             });
         },
 
         get: function(id, options) {
-            if (this.isLoaded) {
+            if (this.collection) {
                 var value = this.collection.get(id);
                 var data = {
                     model: value,
                     options: options
                 };
 
-                if (!value)
-                    return Promise.reject(data);
-
+                if (!value) return Promise.reject(data);
                 return Promise.resolve(data);
             }
 
@@ -177,26 +173,23 @@
             if (!this.Collection)
                 throw new Error('No Collection class defined');
 
+            options = options || {};
             var self = this;
             var mustTrigger = (typeof(options.silent) === 'undefined') || !options.silent;
 
             return new Promise(function(resolve, reject) {
                 var model = new self.Model();
                 model.set(self.Model.idAttribute || 'id', id);
-                if (mustTrigger)
-                    self.trigger('before:get', model, options);
-                model.fetch(options || {})
+                if (mustTrigger) self.trigger('before:get', { model: model, options: options });
+                model.fetch(options)
                 .then(function(data) {
-                    if (mustTrigger)
-                        self.trigger('after:get', data, true);
-                    if (!self.collection)
-                        self.collection = new self.Collection();
+                    if (mustTrigger) self.trigger('after:get', data, true);
+                    if (!self.collection) self.collection = new self.Collection();
                     self.collection.push(model);
                     resolve(data);
                 })
                 .catch(function(data) {
-                    if (mustTrigger)
-                        self.trigger('after:get', data, false);
+                    if (mustTrigger) self.trigger('after:get', data, false);
                     reject(data);
                 });
             });
