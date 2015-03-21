@@ -28,7 +28,7 @@ describe("ASync.Collection tests", function() {
             expect(contact.get('id')).to.equal(1);
         });
 
-        it('must call then', function() {
+        it('must call then', function(done) {
             server.respondWith(
                 'GET',
                 '/contacts',
@@ -222,10 +222,10 @@ describe("ASync.Collection tests", function() {
             server.respond();
         });
 
-        it('must call event handlers', function() {
+        it('must call event handlers', function(done) {
             server.respondWith(
                 'GET',
-                '/notes/3',
+                '/notes',
                 [
                     500,
                     null,

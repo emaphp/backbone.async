@@ -1,5 +1,5 @@
 /*
- * Backbone.Async v1.0.0
+ * Backbone.Async v1.1.0
  * Copyright 2015 Emmanuel Antico
  * This library is distributed under the terms of the MIT license.
  */
@@ -94,7 +94,7 @@
     };
 
     var Async = Backbone.Async = Backbone.Async || {};
-    Async.VERSION = '1.0.0';
+    Async.VERSION = '1.1.0';
 
     Async.Model = Backbone.Model.extend(
         buildPrototype(Backbone.Model, ['fetch', 'save', 'destroy'])
@@ -103,6 +103,80 @@
     Async.Collection = Backbone.Collection.extend(
         buildPrototype(Backbone.Collection, ['fetch'])
     );
+
+    //Storage class
+    var Storage = Async.Storage = function(options) {
+        this.isLoaded = false;
+    
+        if (options) {
+            if (options.Collection) this.Collection = options.Collection;
+            
+            if (options.Model)
+                this.Model = options.Model;
+            else if (options.Collection && options.Collection.model)
+                this.Model = options.Collection.model;
+        }
+        
+        Storage.prototype.initialize.apply(this, arguments);
+    };
+
+    //include Backbone.Events in Storage class prototype
+    _.extend(Storage.prototype, Backbone.Events, {
+        initialize: function(){},
+
+        fetch: function(options) {
+            if (this.isLoaded) {
+                return Promise.resolve({
+                    collection: this.collection,
+                    options: options
+                });
+            }
+
+            if (!this.Collection)
+                throw new Error('No Collection class defined');
+
+            this.collection = new this.Collection();
+            this.listenTo(this.collection, 'after:fetch', function(collection, success) {
+                this.isLoaded = success;
+                if (success) this.stopListening(this.collection, 'after:fetch');
+            });
+
+            return this.collection.fetch(options || {});
+        },
+
+        get: function(id, options) {
+            if (this.isLoaded) {
+                var value = this.collection.get(id);
+                var data = {
+                    model: value,
+                    options: options
+                };
+
+                if (!value)
+                    return Promise.reject(data);
+
+                return Promise.resolve(data);
+            }
+
+            if (!this.Model)
+                throw new Error('No Model class defined');
+
+            var model = new this.Model({id: id});
+            this.listenTo(model, 'after:fetch', function(data, success) {
+                if (!success) return;
+                
+                if (!this.collection)
+                    this.collection = new this.Collection();
+
+                this.collection.push(data.model);
+                this.stopListening(model, 'after:fetch');
+            });
+            return model.fetch(options);
+        }
+    });
+
+    //make Storage class extendable
+    Storage.extend = Backbone.Model.extend;
 
     return Async;
 }));

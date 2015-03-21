@@ -339,7 +339,7 @@ describe("ASync.Model tests", function() {
     });
 
     describe('Save tests', function() {
-        it('must call then', function() {
+        it('must call then', function(done) {
             var value = {id: 1, name: 'Emmanuel', surname: 'Antico'};
             server.respondWith(
                 'PUT',
