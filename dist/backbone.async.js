@@ -135,13 +135,26 @@
             if (!this.Collection)
                 throw new Error('No Collection class defined');
 
-            this.collection = new this.Collection();
-            this.listenTo(this.collection, 'after:fetch', function(collection, success) {
-                this.isLoaded = success;
-                if (success) this.stopListening(this.collection, 'after:fetch');
-            });
+            var self = this;
+            var mustTrigger = (typeof(options.silent) === 'undefined') || !options.silent;
 
-            return this.collection.fetch(options || {});
+            return new Promise(function(resolve, reject) {
+                self.collection = new self.Collection();
+                if (mustTrigger)
+                    self.trigger('before:fetch', self.collection, options);            
+                self.collection.fetch(options || {})
+                .then(function(data) {
+                    if (mustTrigger)
+                        self.trigger('after:fetch', data, true);
+                    self.isLoaded = true;
+                    resolve(data);
+                })
+                .catch(function(data) {
+                    if (mustTrigger)
+                        self.trigger('after:fetch', data, false);
+                    reject(data);
+                });
+            });
         },
 
         get: function(id, options) {
@@ -161,17 +174,32 @@
             if (!this.Model)
                 throw new Error('No Model class defined');
 
-            var model = new this.Model({id: id});
-            this.listenTo(model, 'after:fetch', function(data, success) {
-                if (!success) return;
-                
-                if (!this.collection)
-                    this.collection = new this.Collection();
+            if (!this.Collection)
+                throw new Error('No Collection class defined');
 
-                this.collection.push(data.model);
-                this.stopListening(model, 'after:fetch');
+            var self = this;
+            var mustTrigger = (typeof(options.silent) === 'undefined') || !options.silent;
+
+            return new Promise(function(resolve, reject) {
+                var model = new self.Model();
+                model.set(self.Model.idAttribute || 'id', id);
+                if (mustTrigger)
+                    self.trigger('before:get', model, options);
+                model.fetch(options || {})
+                .then(function(data) {
+                    if (mustTrigger)
+                        self.trigger('after:get', data, true);
+                    if (!self.collection)
+                        self.collection = new self.Collection();
+                    self.collection.push(model);
+                    resolve(data);
+                })
+                .catch(function(data) {
+                    if (mustTrigger)
+                        self.trigger('after:get', data, false);
+                    reject(data);
+                });
             });
-            return model.fetch(options);
         }
     });
 
