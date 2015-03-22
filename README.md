@@ -54,7 +54,7 @@ contacts.fetch()
     if (_.isError(data))
         console.error(data)
     else
-        console.log('Failed to fetch collection');
+        console.log('Failed to fetch collection:', data.response.statusText);
 });
 ```
 
@@ -83,7 +83,7 @@ contact.fetch()
     if (_.isError(data))
         console.error(data)
     else
-        console.log('Failed to fetch contact');
+        console.log('Failed to fetch contact:', data.response.statusText);
 });
 ```
 
@@ -105,7 +105,7 @@ Backbone.Async adds additional events when synchronizing a Model or Collection.
 
 ```javascript
 var Contacts = Backbone.Async.Collection.extend({
-    url: 'http://example.com/contacts'
+    url: '/contacts'
 });
 
 var contacts = new Contacts();
@@ -147,7 +147,7 @@ The *after:fetch* event handler receives the exact same object provided to the f
 
 ```javascript
 var Contact = Backbone.Async.Contact.extend({
-    urlRoot: 'http://example.com/contacts'
+    urlRoot: '/contacts'
 });
 
 var contact = new Contact({id: 1});
@@ -193,6 +193,77 @@ The *before:fetch* and *before:destroy* event handlers will receive an object co
  * options: The options provided.
 
 The *before:save* event handler argument also includes an additional property named *attrs* with the attributes being saved. All *after:[event]* handlers receive the exact same object provided to the fulfilled and rejection callbacks plus a *success* argument.
+
+<br/>
+###Storage
+
+<br/>
+The Storage class provides an additional wrapper for Model and Collection classes.
+
+```javascript
+var Note = Backbone.Async.Model.extend({
+    //...
+});
+
+var Notes = Backbone.Async.Collection.extend({
+    //...
+});
+
+//extend the Storage class
+var NotesStore = Backbone.Async.Storage.extend({
+    Model: Note,
+    Collection: Notes
+});
+
+var storage = new NotesStore();
+```
+
+<br/>
+**Get model**
+```javascript
+//obtain model with ID 1
+storage.get(1, {option: 'value'})
+.then(function(data) {
+    var note = storage.collection.get(1); //returns model
+    
+    //the 'get' method can be called more than once
+    //the returned model will be stored internally
+    //the 'response' property will not be set if the object was alreasy loaded
+    if (data.response) {
+        console.log('A request has been made');
+    }
+})
+.catch(function(data_or_err) {
+    if (_.isError(data_or_err))
+        console.error(err);
+    else
+        console.log(data.statusText);
+});
+```
+
+<br/>
+**Get collection**
+
+```javascript
+//fetch all models
+storage.fetch({option: 'value'})
+.then(function(data) {
+    storage.isLoaded === true; //returns true
+
+    //same response rule applies to 'fetch'    
+    if (data.response) {
+        console.log('A request has been made');
+    }
+})
+.catch(function(data_or_err) {
+    if (_.isError(data_or_err))
+        console.error(err);
+    else
+        console.log(data.statusText);
+});
+```
+
+The Storage class also triggers before/after events when *get* and *fetch* are called.
 
 <br/>
 ###License

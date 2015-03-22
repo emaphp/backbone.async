@@ -93,9 +93,11 @@
         return methods.reduce(wrapMethod(Base.prototype), {});
     };
 
+    //create namespace
     var Async = Backbone.Async = Backbone.Async || {};
     Async.VERSION = '1.1.0';
 
+    //extend Model and Collection prototypes
     Async.Model = Backbone.Model.extend(
         buildPrototype(Backbone.Model, ['fetch', 'save', 'destroy'])
     );
@@ -111,8 +113,7 @@
         if (options) {
             if (options.Collection) this.Collection = options.Collection;
             
-            if (options.Model)
-                this.Model = options.Model;
+            if (options.Model) this.Model = options.Model;
             else if (options.Collection && options.Collection.model)
                 this.Model = options.Collection.model;
         }
@@ -132,8 +133,7 @@
                 });
             }
 
-            if (!this.Collection)
-                throw new Error('No Collection class defined');
+            if (!this.Collection) throw new Error('No Collection class defined');
 
             options = options || {};
             var self = this;
@@ -158,20 +158,16 @@
         get: function(id, options) {
             if (this.collection) {
                 var value = this.collection.get(id);
-                var data = {
-                    model: value,
-                    options: options
-                };
-
-                if (!value) return Promise.reject(data);
-                return Promise.resolve(data);
+                if (value) {
+                    return Promise.resolve({
+                        model: value,
+                        options: options
+                    });
+                }
             }
 
-            if (!this.Model)
-                throw new Error('No Model class defined');
-
-            if (!this.Collection)
-                throw new Error('No Collection class defined');
+            if (!this.Model) throw new Error('No Model class defined');
+            if (!this.Collection) throw new Error('No Collection class defined');
 
             options = options || {};
             var self = this;
@@ -186,6 +182,9 @@
                     if (mustTrigger) self.trigger('after:get', data, true);
                     if (!self.collection) self.collection = new self.Collection();
                     self.collection.push(model);
+                    self.listenTo(model, 'after:destroy', function(data, success) {
+                        if (success) self.collection.remove(data.model, {silent: true});
+                    });
                     resolve(data);
                 })
                 .catch(function(data) {
