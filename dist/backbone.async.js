@@ -1,5 +1,5 @@
 /*
- * Backbone.Async v1.1.0
+ * Backbone.Async v1.1.1
  * Copyright 2015 Emmanuel Antico
  * This library is distributed under the terms of the MIT license.
  */
@@ -94,7 +94,7 @@
 
     //create namespace
     var Async = Backbone.Async = Backbone.Async || {};
-    Async.VERSION = '1.1.0';
+    Async.VERSION = '1.1.1';
 
     //extend Model and Collection prototypes
     Async.Model = Backbone.Model.extend(

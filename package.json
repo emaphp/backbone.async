@@ -1,6 +1,6 @@
 {
   "name": "backbone.async",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Backbone Models meet Promises",
   "author": "Emmanuel Antico <emmanuel.antico@gmail.com>",
   "license": "MIT",
@@ -25,7 +25,6 @@
     "promise-polyfill": "^2.0.0"
   },
   "scripts": {
-    "postinstall": "mkdir -p test/lib/ && wget http://sinonjs.org/releases/sinon-1.13.0.js -O test/lib/sinon-1.13.0.js && grunt vendor",
-    "test": "grunt test && mocha-phantomjs test/test.html"
+    "test": "echo \"Error: no test specified\" && exit 1"
   }
 }
