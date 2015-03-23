@@ -16,8 +16,7 @@
 }(this, function(global, Backbone, _) {
     var overrideCallback = function(callback, resolver, cb_options) {
         return function(model, response, options) {
-            if (callback)
-                callback.apply(model, arguments);
+            if (callback) callback.apply(model, arguments);
 
             var data = {
                 response: response,
@@ -191,6 +190,15 @@
                     if (mustTrigger) self.trigger('after:get', data, false);
                     reject(data);
                 });
+            });
+        },
+
+        store: function(model) {
+            if (!this.Collection) throw new Error('No Collection class defined');
+            if (!this.collection) this.collection = new this.Collection();
+            this.collection.push(model);
+            this.listenTo(model, 'after:destroy', function(data, success) {
+                if (success) this.collection.remove(data.model, {silent: true});
             });
         }
     });

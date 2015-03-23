@@ -830,4 +830,87 @@ describe("ASync.Storage tests", function() {
             server.respond();
         })
     });
+
+    describe('Save tests', function() {
+        it('must save value', function(done) {
+            server.respondWith(
+                'POST',
+                '/contacts',
+                [
+                    200,
+                    {"Content-Type": "application/json"},
+                    JSON.stringify({id: 1, name: 'Emmanuel', surname: 'Antico'})
+                ]
+            );
+
+            var storage = new FIXTURES.ContactsStorage();
+            var model = new FIXTURES.Contact();
+
+            model.set({name: 'Emmanuel', surname: 'Antico'});
+
+            model.save()
+            .then(function(data) {
+                storage.store(model);
+                expect(storage.collection).to.be.a('object');
+                expect(storage.collection.length).to.equal(1);
+                var contact = storage.collection.get(1);
+                expect(contact.attributes).to.deep.equal(model.attributes);
+                done();
+            })
+            .catch(function(err) {done(err)});
+
+            server.respond();
+        });
+    });
+
+    describe('Update tests', function() {
+        it('must update attributes', function(done) {
+            var value = JSON.stringify({id: 1, name: 'Emmanuel', surname: 'Antico'});
+
+            server.respondWith(
+                'GET',
+                '/contacts/1',
+                [
+                    200,
+                    {"Content-Type": "application/json"},
+                    value
+                ]
+            );
+
+            server.respondWith(
+                'PUT',
+                '/contacts/1',
+                [
+                    200,
+                    {"Content-Type": "application/json"},
+                    value.replace('Emmanuel', 'emaphp')
+                ]
+            );
+
+            var storage = new FIXTURES.ContactsStorage();
+
+            storage.get(1)
+            .then(function(data) {
+                var model = data.model;
+                model.set('name', 'emaphp');
+                expect(storage.collection.get(1).get('name')).to.equal('emaphp');
+
+                model.save()
+                .then(function(data) {
+                    expect(storage.collection.get(1).get('name')).to.equal('emaphp');                    
+                    done();
+                })
+                .catch(function(err) {
+                    done(err);
+                });
+
+                server.respond();
+            })
+            .catch(function(err) {
+                done(err);
+            });
+
+            server.respond();
+        });
+    });
 });

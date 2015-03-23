@@ -5,7 +5,7 @@ Backbone Models meet Promises
 ###About
 
 <br/>
-Backbone.Async introduces a Model and a Collection class that wrap their sync methods into a Promise.
+Backbone.Async introduces a Model and a Collection class that wrap their syncronization methods using [Promises](http://www.html5rocks.com/en/tutorials/es6/promises/ "").
 
 <br/>
 ###Acknowledgement
@@ -40,7 +40,7 @@ Browsers not supporting Promises should use a polyfill. You can find one [here](
 **Backbone.Async.Collection**
 ```javascript
 var Contacts = Backbone.Async.Collection.extend({
-    url: 'http://example.com/contacts'
+    url: '/contacts'
 });
 
 var contacts = new Contacts();
@@ -216,6 +216,21 @@ var NotesStore = Backbone.Async.Storage.extend({
 });
 
 var storage = new NotesStore();
+```
+
+<br/>
+**Storing models**
+```javascript
+var note = new Note({message: 'Hello'});
+
+note.save()
+.then(function(data) {
+    storage.store(model);
+    console.log('Model saved');
+})
+.catch(function(data) {
+    console.log('Failed to save model:', data.response.statusText);
+});
 ```
 
 <br/>
