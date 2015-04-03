@@ -126,29 +126,34 @@ describe("ASync.Model tests", function() {
                 expect(afterCallback.called).to.be.true;
                 expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
 
-                var dataArg = beforeCallback.args[0][0];
-                expect(dataArg).to.be.a('object');
-                expect(dataArg).to.have.property('model');
-                expect(dataArg).to.have.property('options');
-                expect(dataArg.model).to.be.deep.equal(contact);
-                expect(dataArg.options).to.have.property('test');
-                expect(dataArg.options).to.have.property('silent');
-                expect(dataArg.options.test).to.be.true;
-                expect(dataArg.options.silent).to.be.false;
+                var beforeModel = beforeCallback.args[0][0];
+                var beforeOptions = beforeCallback.args[0][1];
+                expect(beforeModel).to.be.a('object');
+                expect(beforeOptions).to.be.a('object');
 
-                dataArg = afterCallback.args[0][0];
-                expect(dataArg).to.be.a('object');
-                expect(dataArg).to.have.property('model');
-                expect(dataArg).to.have.property('options');
-                expect(dataArg).to.have.property('response');
-                expect(dataArg.model).to.be.deep.equal(contact);
-                expect(dataArg.response).to.be.deep.equal(dataArg.model.attributes);
-                expect(dataArg.options).to.have.property('test');
-                expect(dataArg.options).to.have.property('silent');
-                expect(dataArg.options.test).to.be.true;
-                expect(dataArg.options.silent).to.be.false;
+                expect(beforeModel).to.be.deep.equal(contact);
+                expect(beforeOptions).to.have.property('test');
+                expect(beforeOptions).to.have.property('silent');
+                expect(beforeOptions.test).to.be.true;
+                expect(beforeOptions.silent).to.be.false;
 
-                var success = afterCallback.args[0][1];
+                var afterModel = afterCallback.args[0][0];
+                var response = afterCallback.args[0][1];
+                var afterOptions = afterCallback.args[0][2];
+
+                expect(afterModel).to.be.a('object');
+                expect(response).to.be.a('object');
+                expect(afterOptions).to.be.a('object');
+
+                expect(afterModel).to.be.deep.equal(contact);
+                expect(response).to.be.deep.equal(afterModel.attributes);
+
+                expect(afterOptions).to.have.property('test');
+                expect(afterOptions).to.have.property('silent');
+                expect(afterOptions.test).to.be.true;
+                expect(afterOptions.silent).to.be.false;
+
+                var success = afterCallback.args[0][3];
                 expect(success).to.be.true;
                 
                 done();
@@ -250,30 +255,33 @@ describe("ASync.Model tests", function() {
                 expect(afterCallback.called).to.be.true;
                 expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
 
-                var dataArg = beforeCallback.args[0][0];
-                expect(dataArg).to.be.a('object');
-                expect(dataArg).to.have.property('model');
-                expect(dataArg).to.have.property('options');
-                expect(dataArg.model).to.be.deep.equal(note);
-                expect(dataArg.options).to.have.property('test');
-                expect(dataArg.options).to.have.property('silent');
-                expect(dataArg.options.test).to.be.true;
-                expect(dataArg.options.silent).to.be.false;
+                var beforeModel = beforeCallback.args[0][0];
+                var beforeOptions = beforeCallback.args[0][1];
+                expect(beforeModel).to.be.a('object');
+                expect(beforeOptions).to.be.a('object');
 
-                dataArg = afterCallback.args[0][0];
-                expect(dataArg).to.be.a('object');
-                expect(dataArg).to.have.property('model');
-                expect(dataArg).to.have.property('options');
-                expect(dataArg).to.have.property('response');
-                expect(dataArg.model).to.be.deep.equal(note);
-                expect(dataArg.options).to.have.property('test');
-                expect(dataArg.options).to.have.property('silent');
-                expect(dataArg.options.test).to.be.true;
-                expect(dataArg.options.silent).to.be.false;
-                expect(dataArg.response.status).to.equal(500);
-                expect(dataArg.response.statusText).to.equal("Internal Server Error");
+                expect(beforeModel).to.be.deep.equal(note);
+                expect(beforeOptions).to.have.property('test');
+                expect(beforeOptions).to.have.property('silent');
+                expect(beforeOptions.test).to.be.true;
+                expect(beforeOptions.silent).to.be.false;
 
-                var success = afterCallback.args[0][1];
+                var afterModel = afterCallback.args[0][0];
+                var response = afterCallback.args[0][1];
+                var afterOptions = afterCallback.args[0][2]
+                expect(afterModel).to.be.a('object');
+                expect(response).to.be.a('object');
+                expect(afterOptions).to.be.a('object');
+
+                expect(beforeModel).to.be.deep.equal(note);
+                expect(beforeOptions).to.have.property('test');
+                expect(beforeOptions).to.have.property('silent');
+                expect(beforeOptions.test).to.be.true;
+                expect(beforeOptions.silent).to.be.false;
+                expect(response.status).to.equal(500);
+                expect(response.statusText).to.equal("Internal Server Error");
+
+                var success = afterCallback.args[0][3];
                 expect(success).to.be.false;
 
                 done();
@@ -441,31 +449,34 @@ describe("ASync.Model tests", function() {
                 expect(afterCallback.called).to.be.true;
                 expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
 
-                var dataArg = beforeCallback.args[0][0];
-                expect(dataArg).to.be.a('object');
-                expect(dataArg).to.have.property('model');
-                expect(dataArg).to.have.property('options');
-                expect(dataArg).to.have.property('attrs');
-                expect(dataArg.model).to.be.deep.equal(contact);
-                expect(dataArg.options).to.have.property('test');
-                expect(dataArg.options).to.have.property('silent');
-                expect(dataArg.options.test).to.be.true;
-                expect(dataArg.options.silent).to.be.false;
-                expect(dataArg.attrs).to.be.deep.equal(value);
+                var beforeModel = beforeCallback.args[0][0];
+                var beforeAttrs = beforeCallback.args[0][1];
+                var beforeOptions = beforeCallback.args[0][2];
+                expect(beforeModel).to.be.a('object');
+                expect(beforeAttrs).to.be.a('object');
+                expect(beforeOptions).to.be.a('object');
 
-                dataArg = afterCallback.args[0][0];
-                expect(dataArg).to.be.a('object');
-                expect(dataArg).to.have.property('model');
-                expect(dataArg).to.have.property('options');
-                expect(dataArg).to.have.property('response');
-                expect(dataArg.model).to.be.deep.equal(contact);
-                expect(dataArg.response).to.be.deep.equal(dataArg.model.attributes);
-                expect(dataArg.options).to.have.property('test');
-                expect(dataArg.options).to.have.property('silent');
-                expect(dataArg.options.test).to.be.true;
-                expect(dataArg.options.silent).to.be.false;
+                expect(beforeModel).to.be.deep.equal(contact);
+                expect(beforeOptions).to.have.property('test');
+                expect(beforeOptions).to.have.property('silent');
+                expect(beforeOptions.test).to.be.true;
+                expect(beforeOptions.silent).to.be.false;
+                expect(beforeAttrs).to.be.deep.equal(value);
 
-                var success = afterCallback.args[0][1];
+                var afterModel = afterCallback.args[0][0];
+                var response = afterCallback.args[0][1];
+                var afterOptions = afterCallback.args[0][2];
+                expect(afterModel).to.be.a('object');
+                expect(response).to.be.a('object');
+                expect(afterOptions).to.be.a('object');
+                expect(afterModel).to.be.deep.equal(contact);
+                expect(response).to.be.deep.equal(afterModel.attributes);
+                expect(afterOptions).to.have.property('test');
+                expect(afterOptions).to.have.property('silent');
+                expect(afterOptions.test).to.be.true;
+                expect(afterOptions.silent).to.be.false;
+
+                var success = afterCallback.args[0][3];
                 expect(success).to.be.true;
                 
                 done();
@@ -494,10 +505,8 @@ describe("ASync.Model tests", function() {
 
             contact.save()
             .then(function(data) {
-                var dataArg = beforeCallback.args[0][0];
-                expect(dataArg).to.be.a('object');
-                expect(dataArg).to.have.property('attrs');
-                expect(dataArg.attrs).to.be.undefined;
+                var attrs = beforeCallback.args[0][1];
+                expect(attrs).to.be.undefined;
                 done();
             })
             .catch(function(err) { done(err); });
@@ -606,36 +615,40 @@ describe("ASync.Model tests", function() {
                 expect(afterCallback.called).to.be.true;
                 expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
 
-                var dataArg = beforeCallback.args[0][0];
-                expect(dataArg).to.be.a('object');
-                expect(dataArg).to.have.property('model');
-                expect(dataArg).to.have.property('options');
-                expect(dataArg).to.have.property('attrs');
-                expect(dataArg.model).to.be.deep.equal(note);
-                expect(dataArg.options).to.have.property('test');
-                expect(dataArg.options).to.have.property('silent');
-                expect(dataArg.options.test).to.be.true;
-                expect(dataArg.options.silent).to.be.false;
-                expect(dataArg.attrs).to.be.deep.equal(value);
+                var beforeModel = beforeCallback.args[0][0];
+                var attrs = beforeCallback.args[0][1];
+                var beforeOptions = beforeCallback.args[0][2];
+                expect(beforeModel).to.be.a('object');
+                expect(attrs).to.be.a('object');
+                expect(beforeOptions).to.be.a('object');
 
-                dataArg = afterCallback.args[0][0];
-                expect(dataArg).to.be.a('object');
-                expect(dataArg).to.have.property('model');
-                expect(dataArg).to.have.property('options');
-                expect(dataArg).to.have.property('response');
-                expect(dataArg.model).to.be.deep.equal(note);
-                expect(data.response).to.be.a('object');
-                expect(data.response).to.have.property('status');
-                expect(data.response).to.have.property('statusText');
-                expect(data.response.status).to.equal(500);
-                expect(data.response.statusText).to.equal('Internal Server Error');
+                expect(beforeModel).to.be.deep.equal(note);
+                expect(beforeOptions).to.have.property('test');
+                expect(beforeOptions).to.have.property('silent');
+                expect(beforeOptions.test).to.be.true;
+                expect(beforeOptions.silent).to.be.false;
+                expect(attrs).to.be.deep.equal(value);
 
-                expect(dataArg.options).to.have.property('test');
-                expect(dataArg.options).to.have.property('silent');
-                expect(dataArg.options.test).to.be.true;
-                expect(dataArg.options.silent).to.be.false;
+                var afterModel = afterCallback.args[0][0];
+                var response = afterCallback.args[0][1];
+                var afterOptions = afterCallback.args[0][2];
+                expect(afterModel).to.be.a('object');
+                expect(response).to.be.a('object');
+                expect(afterOptions).to.be.a('object');
 
-                var success = afterCallback.args[0][1];
+                expect(afterModel).to.be.deep.equal(note);
+                expect(response).to.be.a('object');
+                expect(response).to.have.property('status');
+                expect(response).to.have.property('statusText');
+                expect(response.status).to.equal(500);
+                expect(response.statusText).to.equal('Internal Server Error');
+
+                expect(afterOptions).to.have.property('test');
+                expect(afterOptions).to.have.property('silent');
+                expect(afterOptions.test).to.be.true;
+                expect(afterOptions.silent).to.be.false;
+
+                var success = afterCallback.args[0][3];
                 expect(success).to.be.false;
                 
                 done();
@@ -797,29 +810,29 @@ describe("ASync.Model tests", function() {
                 expect(afterCallback.called).to.be.true;
                 expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
 
-                var dataArg = beforeCallback.args[0][0];
-                expect(dataArg).to.be.a('object');
-                expect(dataArg).to.have.property('model');
-                expect(dataArg).to.have.property('options');
-                expect(dataArg.model).to.be.deep.equal(contact);
-                expect(dataArg.options).to.have.property('test');
-                expect(dataArg.options).to.have.property('silent');
-                expect(dataArg.options.test).to.be.true;
-                expect(dataArg.options.silent).to.be.false;
+                var beforeModel = beforeCallback.args[0][0];
+                var beforeOptions = beforeCallback.args[0][1];
+                expect(beforeModel).to.be.a('object');
+                expect(beforeOptions).to.be.a('object');
+                expect(beforeModel).to.be.deep.equal(contact);
+                expect(beforeOptions).to.have.property('test');
+                expect(beforeOptions).to.have.property('silent');
+                expect(beforeOptions.test).to.be.true;
+                expect(beforeOptions.silent).to.be.false;
 
-                dataArg = afterCallback.args[0][0];
-                expect(dataArg).to.be.a('object');
-                expect(dataArg).to.have.property('model');
-                expect(dataArg).to.have.property('options');
-                expect(dataArg).to.have.property('response');
-                expect(dataArg.model).to.be.deep.equal(contact);
-                expect(dataArg.response).to.be.undefined;
-                expect(dataArg.options).to.have.property('test');
-                expect(dataArg.options).to.have.property('silent');
-                expect(dataArg.options.test).to.be.true;
-                expect(dataArg.options.silent).to.be.false;
+                var afterModel = afterCallback.args[0][0];
+                var response = afterCallback.args[0][1];
+                var afterOptions = afterCallback.args[0][2];
+                expect(afterModel).to.be.a('object');
+                expect(afterOptions).to.be.a('object');
+                expect(afterModel).to.be.deep.equal(contact);
+                expect(response).to.be.undefined;
+                expect(afterOptions).to.have.property('test');
+                expect(afterOptions).to.have.property('silent');
+                expect(afterOptions.test).to.be.true;
+                expect(afterOptions.silent).to.be.false;
 
-                var success = afterCallback.args[0][1];
+                var success = afterCallback.args[0][3];
                 expect(success).to.be.true;
                 
                 done();
@@ -952,34 +965,36 @@ describe("ASync.Model tests", function() {
                 expect(afterCallback.called).to.be.true;
                 expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
 
-                var dataArg = beforeCallback.args[0][0];
-                expect(dataArg).to.be.a('object');
-                expect(dataArg).to.have.property('model');
-                expect(dataArg).to.have.property('options');
-                expect(dataArg.model).to.be.deep.equal(note);
-                expect(dataArg.options).to.have.property('test');
-                expect(dataArg.options).to.have.property('silent');
-                expect(dataArg.options.test).to.be.true;
-                expect(dataArg.options.silent).to.be.false;
+                var beforeModel = beforeCallback.args[0][0];
+                var beforeOptions = beforeCallback.args[0][1];
+                expect(beforeModel).to.be.a('object');
+                expect(beforeOptions).to.be.a('object');
+                expect(beforeModel).to.be.deep.equal(note);
+                expect(beforeOptions).to.have.property('test');
+                expect(beforeOptions).to.have.property('silent');
+                expect(beforeOptions.test).to.be.true;
+                expect(beforeOptions.silent).to.be.false;
 
-                dataArg = afterCallback.args[0][0];
-                expect(dataArg).to.be.a('object');
-                expect(dataArg).to.have.property('model');
-                expect(dataArg).to.have.property('options');
-                expect(dataArg).to.have.property('response');
-                expect(dataArg.model).to.be.deep.equal(note);
-                expect(data.response).to.be.a('object');
-                expect(data.response).to.have.property('status');
-                expect(data.response).to.have.property('statusText');
-                expect(data.response.status).to.equal(500);
-                expect(data.response.statusText).to.equal('Internal Server Error');
+                var afterModel = afterCallback.args[0][0];
+                var response = afterCallback.args[0][1];
+                var afterOptions = afterCallback.args[0][2];
+                expect(afterModel).to.be.a('object');
+                expect(response).to.be.a('object');
+                expect(afterOptions).to.be.a('object');
 
-                expect(dataArg.options).to.have.property('test');
-                expect(dataArg.options).to.have.property('silent');
-                expect(dataArg.options.test).to.be.true;
-                expect(dataArg.options.silent).to.be.false;
+                expect(afterModel).to.be.deep.equal(note);
+                expect(response).to.be.a('object');
+                expect(response).to.have.property('status');
+                expect(response).to.have.property('statusText');
+                expect(response.status).to.equal(500);
+                expect(response.statusText).to.equal('Internal Server Error');
 
-                var success = afterCallback.args[0][1];
+                expect(afterOptions).to.have.property('test');
+                expect(afterOptions).to.have.property('silent');
+                expect(afterOptions.test).to.be.true;
+                expect(afterOptions.silent).to.be.false;
+
+                var success = afterCallback.args[0][3];
                 expect(success).to.be.false;
                 
                 done();

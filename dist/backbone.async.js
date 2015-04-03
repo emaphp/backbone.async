@@ -31,7 +31,7 @@
 
             //triggers an after:method event
             if (typeof(options.silent) === 'undefined' || !options.silent) {
-                model.trigger('after:' + cbOptions.method, data, cbOptions.success);
+                model.trigger('after:' + cbOptions.method, model, response, options, cbOptions._success);
             }
         };
     };
@@ -68,13 +68,13 @@
                 var cbOptions = {method: method, collection: proto === Backbone.Collection.prototype};
 
                 return new Promise(function(resolve, reject) {
-                    options.success = overrideCallback(success, resolve, _.extend({success: true}, cbOptions));
-                    options.error = overrideCallback(error, reject, _.extend({success: false}, cbOptions));
+                    options.success = overrideCallback(success, resolve, _.extend({_success: true}, cbOptions));
+                    options.error = overrideCallback(error, reject, _.extend({_success: false}, cbOptions));
 
                     if (cbOptions.collection) {
                         //if not silent, trigger a before event
                         if (typeof(options.silent) === 'undefined' || !options.silent) {
-                            model.trigger('before:' + method,  {collection: model, options: options});
+                            model.trigger('before:' + method, model, options);
                         }
 
                         proto[method].call(model, options);
@@ -82,7 +82,11 @@
                     else {
                         //if not silent, trigger a before event
                         if (typeof(options.silent) === 'undefined' || !options.silent) {
-                            model.trigger('before:' + method,  method === 'save' ? {model: model, options: options, attrs: attrs} : {model: model, options: options});
+                            if (method === 'save') {
+                                model.trigger('before:save', model, attrs, options);
+                            } else {
+                                model.trigger('before:' + method, model, options);
+                            }
                         }
 
                         proto[method].apply(model, method === 'save' ? [attrs, options] : [options]);
@@ -189,8 +193,13 @@
                 }
             }
 
-            if (!this.Model) throw new Error('No Model class defined');
-            if (!this.Collection) throw new Error('No Collection class defined');
+            if (!this.Model) {
+                throw new Error('No Model class defined');
+            }
+
+            if (!this.Collection) {
+                throw new Error('No Collection class defined');
+            }
 
             options = options || {};
             var self = this;
