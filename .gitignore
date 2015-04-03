@@ -28,5 +28,3 @@ bower_components
 # Users Environment Variables
 .lock-wscript
 
-# test libraries
-test/lib

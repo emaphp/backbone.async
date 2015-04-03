@@ -1,5 +1,5 @@
 /*
- * Backbone.Async v1.1.1
+ * Backbone.Async v1.2.0
  * Copyright 2015 Emmanuel Antico
  * This library is distributed under the terms of the MIT license.
  */
@@ -8,15 +8,17 @@
         define(['backbone', 'underscore'], function(Backbone, _) {
             return factory(global, Backbone, _);
         });
-    }
-    else if (typeof exports !== 'undefined')
+    } else if (typeof exports !== 'undefined') {
         module.exports = factory(global, require('backbone'), require('underscore'));
-    else
+    } else {
         factory(global, global.Backbone, global._);
+    }
 }(this, function(global, Backbone, _) {
-    var overrideCallback = function(callback, resolver, cb_options) {
+    var overrideCallback = function(callback, resolver, cbOptions) {
         return function(model, response, options) {
-            if (callback) callback.apply(model, arguments);
+            if (callback) {
+                callback.apply(model, arguments);
+            }
 
             var data = {
                 response: response,
@@ -24,12 +26,13 @@
             };
 
             //populate data object correctly and invoke resolver
-            data[cb_options.collection ? 'collection' : 'model'] = model;
+            data[cbOptions.collection ? 'collection' : 'model'] = model;
             resolver(data);
 
             //triggers an after:method event
-            if (typeof(options.silent) === 'undefined' || !options.silent)
-                model.trigger('after:' + cb_options.method, data, cb_options.success);
+            if (typeof(options.silent) === 'undefined' || !options.silent) {
+                model.trigger('after:' + cbOptions.method, data, cbOptions.success);
+            }
         };
     };
 
@@ -40,14 +43,13 @@
             if (key === null || typeof key === 'object') {
                 attrs = key;
                 options = value;
-            }
-            else if (key) {
+            } else if (key) {
                 (attrs = {})[key] = value;
                 options = _options;
             }
-        }
-        else
+        } else {
             options = key;
+        }
 
         options = options ? _.extend({}, options) : {};
         return { attrs: attrs, options: options };
@@ -63,22 +65,26 @@
                 var attrs = parsed.attrs;
                 var success = options.success;
                 var error = options.error;
-                var cb_options = {method: method, collection: proto === Backbone.Collection.prototype};
+                var cbOptions = {method: method, collection: proto === Backbone.Collection.prototype};
 
                 return new Promise(function(resolve, reject) {
-                    options.success = overrideCallback(success, resolve, _.extend({success: true}, cb_options));
-                    options.error = overrideCallback(error, reject, _.extend({success: false}, cb_options));
+                    options.success = overrideCallback(success, resolve, _.extend({success: true}, cbOptions));
+                    options.error = overrideCallback(error, reject, _.extend({success: false}, cbOptions));
 
-                    if (cb_options.collection) {
+                    if (cbOptions.collection) {
                         //if not silent, trigger a before event
-                        if (typeof(options.silent) === 'undefined' || !options.silent)
+                        if (typeof(options.silent) === 'undefined' || !options.silent) {
                             model.trigger('before:' + method,  {collection: model, options: options});
+                        }
+
                         proto[method].call(model, options);
                     }
                     else {
                         //if not silent, trigger a before event
-                        if (typeof(options.silent) === 'undefined' || !options.silent)
+                        if (typeof(options.silent) === 'undefined' || !options.silent) {
                             model.trigger('before:' + method,  method === 'save' ? {model: model, options: options, attrs: attrs} : {model: model, options: options});
+                        }
+
                         proto[method].apply(model, method === 'save' ? [attrs, options] : [options]);
                     }
                 });
@@ -94,7 +100,7 @@
 
     //create namespace
     var Async = Backbone.Async = Backbone.Async || {};
-    Async.VERSION = '1.1.1';
+    Async.VERSION = '1.2.0';
 
     //extend Model and Collection prototypes
     Async.Model = Backbone.Model.extend(
@@ -107,14 +113,18 @@
 
     //Storage class
     var Storage = Async.Storage = function(options) {
-        this.isLoaded = false;
+        this.loaded = false;
     
         if (options) {
-            if (options.Collection) this.Collection = options.Collection;
+            if (options.Collection) {
+                this.Collection = options.Collection;
+            }
             
-            if (options.Model) this.Model = options.Model;
-            else if (options.Collection && options.Collection.model)
+            if (options.Model) {
+                this.Model = options.Model;
+            } else if (options.Collection && options.Collection.model) {
                 this.Model = options.Collection.model;
+            }
         }
         
         Storage.prototype.initialize.apply(this, arguments);
@@ -125,30 +135,44 @@
         initialize: function(){},
 
         fetch: function(options) {
-            if (this.isLoaded) {
+            if (this.loaded) {
                 return Promise.resolve({
                     collection: this.collection,
                     options: options
                 });
             }
 
-            if (!this.Collection) throw new Error('No Collection class defined');
+            if (!this.Collection) {
+                throw new Error('No Collection class defined');
+            }
 
             options = options || {};
             var self = this;
             var mustTrigger = (typeof(options.silent) === 'undefined') || !options.silent;
 
             return new Promise(function(resolve, reject) {
-                if (!self.collection) self.collection = new self.Collection();
-                if (mustTrigger) self.trigger('before:fetch', { collection: self.collection, options: options});
+                if (!self.collection) {
+                    self.collection = new self.Collection();
+                }
+
+                if (mustTrigger) {
+                    self.trigger('before:fetch', { collection: self.collection, options: options});
+                }
+
                 self.collection.fetch(options)
                 .then(function(data) {
-                    if (mustTrigger) self.trigger('after:fetch', data, true);
-                    self.isLoaded = true;
+                    if (mustTrigger) {
+                        self.trigger('after:fetch', data, true);
+                    }
+
+                    self.loaded = true;
                     resolve(data);
                 })
                 .catch(function(data) {
-                    if (mustTrigger) self.trigger('after:fetch', data, false);
+                    if (mustTrigger) {
+                        self.trigger('after:fetch', data, false);
+                    }
+
                     reject(data);
                 });
             });
@@ -175,30 +199,53 @@
             return new Promise(function(resolve, reject) {
                 var model = new self.Model();
                 model.set(self.Model.idAttribute || 'id', id);
-                if (mustTrigger) self.trigger('before:get', { model: model, options: options });
+
+                if (mustTrigger) {
+                    self.trigger('before:get', { model: model, options: options });
+                }
+
                 model.fetch(options)
                 .then(function(data) {
-                    if (mustTrigger) self.trigger('after:get', data, true);
-                    if (!self.collection) self.collection = new self.Collection();
+                    if (mustTrigger) {
+                        self.trigger('after:get', data, true);
+                    }
+
+                    if (!self.collection) {
+                        self.collection = new self.Collection();
+                    }
+
                     self.collection.push(model);
                     self.listenTo(model, 'after:destroy', function(data, success) {
-                        if (success) self.collection.remove(data.model, {silent: true});
+                        if (success) {
+                            self.collection.remove(data.model, {silent: true});
+                        }
                     });
                     resolve(data);
                 })
                 .catch(function(data) {
-                    if (mustTrigger) self.trigger('after:get', data, false);
+                    if (mustTrigger) {
+                        self.trigger('after:get', data, false);
+                    }
+
                     reject(data);
                 });
             });
         },
 
         store: function(model) {
-            if (!this.Collection) throw new Error('No Collection class defined');
-            if (!this.collection) this.collection = new this.Collection();
+            if (!this.Collection) {
+                throw new Error('No Collection class defined');
+            }
+
+            if (!this.collection) {
+                this.collection = new this.Collection();
+            }
+
             this.collection.push(model);
             this.listenTo(model, 'after:destroy', function(data, success) {
-                if (success) this.collection.remove(data.model, {silent: true});
+                if (success) {
+                    this.collection.remove(data.model, {silent: true});
+                }
             });
         }
     });

@@ -33,7 +33,7 @@ describe("ASync.Storage tests", function() {
                 expect(storage.collection.models.length).to.equal(1);
                 var model = storage.collection.get(1);
                 expect(model.attributes).to.deep.equal(value);
-                expect(storage.isLoaded).to.be.false;
+                expect(storage.loaded).to.be.false;
 
                 expect(data.response).to.deep.equal(value);
 
@@ -204,7 +204,7 @@ describe("ASync.Storage tests", function() {
                     expect(storage.collection.models.length).to.equal(1);
                     var model = storage.collection.get(5);
                     expect(model.attributes).to.deep.equal(value);
-                    expect(storage.isLoaded).to.be.false;
+                    expect(storage.loaded).to.be.false;
 
                     expect(data.options).to.be.a('object');
                     expect(data.options).to.have.property('test');
@@ -256,7 +256,7 @@ describe("ASync.Storage tests", function() {
                 expect(storage.collection.models.length).to.equal(3);
                 var model = storage.collection.get(1);
                 expect(model.attributes).to.deep.equal({id: 1, name: 'Curly'});
-                expect(storage.isLoaded).to.be.true;
+                expect(storage.loaded).to.be.true;
 
                 var options = data.options;
                 expect(options).to.have.property('test');
@@ -446,7 +446,7 @@ describe("ASync.Storage tests", function() {
                     expect(afterCallback.called).to.be.false;
 
                     expect(data.collection).to.deep.equal(storage.collection);
-                    expect(storage.isLoaded).to.be.true;
+                    expect(storage.loaded).to.be.true;
 
                     expect(data.options).to.have.property('test');
                     expect(data.options).to.have.property('silent');
@@ -495,7 +495,7 @@ describe("ASync.Storage tests", function() {
                 expect(data.options.test).to.be.true;
                 expect(data.options.silent).to.be.false;
 
-                expect(storage.isLoaded).to.be.false;
+                expect(storage.loaded).to.be.false;
                 expect(storage.collection).to.be.undefined;
                 done();
             });
@@ -644,7 +644,7 @@ describe("ASync.Storage tests", function() {
                 expect(data).to.have.property('response');
                 expect(data).to.have.property('options');
 
-                expect(storage.isLoaded).to.be.false;
+                expect(storage.loaded).to.be.false;
                 expect(storage.collection.length).to.equal(0);
                 expect(data.response).to.be.a('object');
                 expect(data.response.status).to.equal(404);
@@ -715,7 +715,7 @@ describe("ASync.Storage tests", function() {
                 expect(success).to.be.false;
 
                 expect(storage.collection.length).to.equal(0);
-                expect(storage.isLoaded).to.be.false;
+                expect(storage.loaded).to.be.false;
                 done();
             });
 
