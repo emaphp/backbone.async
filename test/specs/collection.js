@@ -118,31 +118,33 @@ describe("ASync.Collection tests", function() {
                 expect(afterCallback.called).to.be.true;
                 expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
 
-                var dataArg = beforeCallback.args[0][0];
-                expect(dataArg).to.be.a('object');
-                expect(dataArg).to.have.property('collection');
-                expect(dataArg).to.have.property('options');
-                expect(dataArg.collection).to.be.deep.equal(contacts);
-                expect(dataArg.options).to.have.property('test');
-                expect(dataArg.options).to.have.property('silent');
-                expect(dataArg.options.test).to.be.true;
-                expect(dataArg.options.silent).to.be.false;
+                var beforeCollection = beforeCallback.args[0][0];
+                var beforeOptions = beforeCallback.args[0][1];
+                expect(beforeCollection).to.be.a('object');
+                expect(beforeOptions).to.be.a('object');
 
-                dataArg = afterCallback.args[0][0];
-                expect(dataArg).to.be.a('object');
-                expect(dataArg).to.have.property('collection');
-                expect(dataArg).to.have.property('options');
-                expect(dataArg).to.have.property('response');
-                expect(dataArg.collection).to.be.deep.equal(contacts);
-                expect(dataArg.collection.length).to.equal(3);
-                expect(dataArg.options).to.have.property('test');
-                expect(dataArg.options).to.have.property('silent');
-                expect(dataArg.options.test).to.be.true;
-                expect(dataArg.options.silent).to.be.false;
-                expect(dataArg.response).to.be.a('array');
-                expect(dataArg.response.length).to.equal(3);
+                expect(beforeCollection).to.be.deep.equal(contacts);
+                expect(beforeOptions).to.have.property('test');
+                expect(beforeOptions).to.have.property('silent');
+                expect(beforeOptions.test).to.be.true;
+                expect(beforeOptions.silent).to.be.false;
 
-                var success = afterCallback.args[0][1];
+                var afterCollection = afterCallback.args[0][0];
+                var response = afterCallback.args[0][1];
+                var afterOptions = afterCallback.args[0][2];
+                expect(afterCollection).to.be.a('object');
+                expect(response).to.be.a('array');
+                expect(afterOptions).to.be.a('object');
+
+                expect(afterCollection).to.be.deep.equal(contacts);
+                expect(afterCollection.length).to.equal(3);
+                expect(afterOptions).to.have.property('test');
+                expect(afterOptions).to.have.property('silent');
+                expect(afterOptions.test).to.be.true;
+                expect(afterOptions.silent).to.be.false;
+                expect(response.length).to.equal(3);
+
+                var success = afterCallback.args[0][3];
                 expect(success).to.be.true;
                 done();
             })
@@ -248,30 +250,31 @@ describe("ASync.Collection tests", function() {
                 expect(afterCallback.called).to.be.true;
                 expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
 
-                var dataArg = beforeCallback.args[0][0];
-                expect(dataArg).to.be.a('object');
-                expect(dataArg).to.have.property('collection');
-                expect(dataArg).to.have.property('options');
-                expect(dataArg.collection).to.be.deep.equal(notes);
-                expect(dataArg.options).to.have.property('test');
-                expect(dataArg.options).to.have.property('silent');
-                expect(dataArg.options.test).to.be.true;
-                expect(dataArg.options.silent).to.be.false;
+                var beforeCollection = beforeCallback.args[0][0];
+                var beforeOptions = beforeCallback.args[0][1];
+                expect(beforeCollection).to.be.a('object');
+                expect(beforeOptions).to.be.a('object');
+                expect(beforeCollection).to.be.deep.equal(notes);
+                expect(beforeOptions).to.have.property('test');
+                expect(beforeOptions).to.have.property('silent');
+                expect(beforeOptions.test).to.be.true;
+                expect(beforeOptions.silent).to.be.false;
 
-                dataArg = afterCallback.args[0][0];
-                expect(dataArg).to.be.a('object');
-                expect(dataArg).to.have.property('collection');
-                expect(dataArg).to.have.property('options');
-                expect(dataArg).to.have.property('response');
-                expect(dataArg.collection).to.be.deep.equal(notes);
-                expect(dataArg.options).to.have.property('test');
-                expect(dataArg.options).to.have.property('silent');
-                expect(dataArg.options.test).to.be.true;
-                expect(dataArg.options.silent).to.be.false;
-                expect(dataArg.response.status).to.equal(500);
-                expect(dataArg.response.statusText).to.equal("Internal Server Error");
+                var afterCollection = afterCallback.args[0][0];
+                var response = afterCallback.args[0][1];
+                var afterOptions = afterCallback.args[0][2];
+                expect(afterCollection).to.be.a('object');
+                expect(response).to.be.a('object');
+                expect(afterOptions).to.be.a('object');
+                expect(afterCollection).to.be.deep.equal(notes);
+                expect(afterOptions).to.have.property('test');
+                expect(afterOptions).to.have.property('silent');
+                expect(afterOptions.test).to.be.true;
+                expect(afterOptions.silent).to.be.false;
+                expect(response.status).to.equal(500);
+                expect(response.statusText).to.equal("Internal Server Error");
 
-                var success = afterCallback.args[0][1];
+                var success = afterCallback.args[0][3];
                 expect(success).to.be.false;
 
                 done();
