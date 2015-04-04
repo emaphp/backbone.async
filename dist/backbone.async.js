@@ -58,14 +58,13 @@
     var wrapMethod = function(proto) {
         return function(agg, method) {
             agg[method] = function(key, value, _options) {
-                var model = this;
-
-                var parsed = parseArgs(method, key, value, _options);
-                var options = parsed.options;
-                var attrs = parsed.attrs;
-                var success = options.success;
-                var error = options.error;
-                var cbOptions = {method: method, collection: proto === Backbone.Collection.prototype};
+                var model = this,
+                    parsed = parseArgs(method, key, value, _options),
+                    options = parsed.options,
+                    attrs = parsed.attrs,
+                    success = options.success,
+                    error = options.error,
+                    cbOptions = {method: method, collection: proto === Backbone.Collection.prototype};
 
                 return new Promise(function(resolve, reject) {
                     options.success = overrideCallback(success, resolve, _.extend({_success: true}, cbOptions));
@@ -112,13 +111,11 @@
     );
 
     Async.Collection = Backbone.Collection.extend(
-        buildPrototype(Backbone.Collection, ['fetch'])
+        buildPrototype(Backbone.Collection, ['fetch', 'create'])
     );
 
     //Storage class
     var Storage = Async.Storage = function(options) {
-        this.loaded = false;
-    
         if (options) {
             if (options.Collection) {
                 this.Collection = options.Collection;
@@ -131,14 +128,16 @@
             }
         }
         
-        Storage.prototype.initialize.apply(this, arguments);
+        this.loaded = false;
+        this.initialize.apply(this, arguments);
     };
 
     //include Backbone.Events in Storage class prototype
     _.extend(Storage.prototype, Backbone.Events, {
         initialize: function(){},
 
-        fetch: function(options) {
+        //fetchs a collection
+        fetchAll: function(options) {
             if (this.loaded) {
                 return Promise.resolve({
                     collection: this.collection,
@@ -146,27 +145,20 @@
                 });
             }
 
-            if (!this.Collection) {
-                throw new Error('No Collection class defined');
-            }
-
+            this._initCollection();
             options = options || {};
-            var self = this;
-            var mustTrigger = (typeof(options.silent) === 'undefined') || !options.silent;
+            var self = this,
+                mustTrigger = (typeof(options.silent) === 'undefined') || !options.silent;
 
             return new Promise(function(resolve, reject) {
-                if (!self.collection) {
-                    self.collection = new self.Collection();
-                }
-
                 if (mustTrigger) {
-                    self.trigger('before:fetch', { collection: self.collection, options: options});
+                    self.trigger('before:fetchAll', self.collection, options);
                 }
 
                 self.collection.fetch(options)
                 .then(function(data) {
                     if (mustTrigger) {
-                        self.trigger('after:fetch', data, true);
+                        self.trigger('after:fetchAll', data.collection, data.response, data.options, true);
                     }
 
                     self.loaded = true;
@@ -174,7 +166,11 @@
                 })
                 .catch(function(data) {
                     if (mustTrigger) {
-                        self.trigger('after:fetch', data, false);
+                        if (_.isError(data)) {
+                            self.trigger('after:fetchAll', data, undefined, undefined, false);
+                        } else {
+                            self.trigger('after:fetchAll', data.collection, data.response, data.options, false);
+                        }
                     }
 
                     reject(data);
@@ -182,12 +178,13 @@
             });
         },
 
-        get: function(id, options) {
+        //fetchs a model
+        fetch: function(id, options) {
             if (this.collection) {
-                var value = this.collection.get(id);
-                if (value) {
+                var stored = this.collection.get(id);
+                if (stored) {
                     return Promise.resolve({
-                        model: value,
+                        model: stored,
                         options: options
                     });
                 }
@@ -197,43 +194,40 @@
                 throw new Error('No Model class defined');
             }
 
-            if (!this.Collection) {
-                throw new Error('No Collection class defined');
-            }
-
+            this._initCollection();
             options = options || {};
-            var self = this;
-            var mustTrigger = (typeof(options.silent) === 'undefined') || !options.silent;
+            var self = this,
+                mustTrigger = (typeof(options.silent) === 'undefined') || !options.silent;
 
             return new Promise(function(resolve, reject) {
                 var model = new self.Model();
                 model.set(self.Model.idAttribute || 'id', id);
 
                 if (mustTrigger) {
-                    self.trigger('before:get', { model: model, options: options });
+                    self.trigger('before:fetch', model, options);
                 }
 
                 model.fetch(options)
                 .then(function(data) {
                     if (mustTrigger) {
-                        self.trigger('after:get', data, true);
-                    }
-
-                    if (!self.collection) {
-                        self.collection = new self.Collection();
+                        self.trigger('after:fetch', data.model, data.response, data.options, true);
                     }
 
                     self.collection.push(model);
-                    self.listenTo(model, 'after:destroy', function(data, success) {
+                    self.listenTo(model, 'after:destroy', function(model, options, success) {
                         if (success) {
-                            self.collection.remove(data.model, {silent: true});
+                            self.collection.remove(model, _.extend({silent: true}, options));
                         }
                     });
                     resolve(data);
                 })
                 .catch(function(data) {
                     if (mustTrigger) {
-                        self.trigger('after:get', data, false);
+                        if (_.isError(data)) {
+                            self.trigger('after:fetch', data, undefined, undefined, false);
+                        } else {
+                            self.trigger('after:fetch', data.model, data.response, data.options, false);
+                        }
                     }
 
                     reject(data);
@@ -241,7 +235,31 @@
             });
         },
 
+        //stores a model
         store: function(model) {
+            this._initCollection();
+            this.collection.push(model);
+            this.listenTo(model, 'after:destroy', function(model, response, options, success) {
+                if (success) {
+                    this.collection.remove(model, _.extend({silent: true}, options));
+                }
+            });
+        },
+
+        //obtains a model by id
+        get: function(id) {
+            this._initCollection();
+            return this.collection.get(id);
+        },
+
+        //wrapper for Collection.create
+        create: function() {
+            this._initCollection();
+            return this.collection.create.apply(this.collection, arguments);
+        },
+
+        //initializes a collection instance
+        _initCollection: function() {
             if (!this.Collection) {
                 throw new Error('No Collection class defined');
             }
@@ -249,13 +267,6 @@
             if (!this.collection) {
                 this.collection = new this.Collection();
             }
-
-            this.collection.push(model);
-            this.listenTo(model, 'after:destroy', function(data, success) {
-                if (success) {
-                    this.collection.remove(data.model, {silent: true});
-                }
-            });
         }
     });
 
