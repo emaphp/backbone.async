@@ -64,7 +64,10 @@
                     attrs = parsed.attrs,
                     success = options.success,
                     error = options.error,
-                    cbOptions = {method: method, collection: proto === Backbone.Collection.prototype};
+                    cbOptions = {
+                        method: method,
+                        collection: proto === Backbone.Collection.prototype
+                    };
 
                 return new Promise(function(resolve, reject) {
                     options.success = overrideCallback(success, resolve, _.extend({_success: true}, cbOptions));
@@ -218,7 +221,7 @@
                     }
 
                     self.collection.push(model);
-                    self.listenTo(model, 'after:destroy', function(model, options, success) {
+                    self.listenToOnce(model, 'after:destroy', function(model, options, success) {
                         if (success) {
                             self.collection.remove(model, _.extend({silent: true}, options));
                         }
@@ -243,7 +246,7 @@
         store: function(model) {
             this._initCollection();
             this.collection.push(model);
-            this.listenTo(model, 'after:destroy', function(model, response, options, success) {
+            this.listenToOnce(model, 'after:destroy', function(model, response, options, success) {
                 if (success) {
                     this.collection.remove(model, _.extend({silent: true}, options));
                 }
@@ -257,9 +260,45 @@
         },
 
         //wrapper for Collection.create
-        create: function() {
+        create: function(attributes, options) {
+            if (!this.Model) {
+                throw new Error('No Model class defined');
+            }
+
             this._initCollection();
-            return this.collection.create.apply(this.collection, arguments);
+            options = options || {};
+            var self = this,
+                mustTrigger = (typeof(options.silent) === 'undefined') || !options.silent;
+
+            return new Promise(function(resolve, reject) {
+                if (mustTrigger) {
+                    self.trigger('before:create', self.collection, attributes, options);
+                }
+
+                self.collection.create(attributes, options)
+                .then(function(data) {
+                    if (mustTrigger) {
+                        self.trigger('after:create', data.model, data.response, data.options, true);
+                    }
+
+                    self.listenToOnce(data.model, 'after:destroy', function(model, options, success) {
+                        if (success) {
+                            self.collection.remove(model, _.extend({silent: true}, options));
+                        }
+                    });
+                    resolve(data);
+                })
+                .catch(function(data) {
+                    if (mustTrigger) {
+                        if (_.isError(data)) {
+                            self.trigger('after:create', data, undefined, undefined, false);
+                        } else {
+                            self.trigger('after:create', data.model, data.response, data.options, false);
+                        }
+                    }
+                    reject(data);
+                });
+            });
         },
 
         //initializes a collection instance
