@@ -26,7 +26,7 @@
             };
 
             //populate data object correctly and invoke resolver
-            data[cbOptions.collection ? 'collection' : 'model'] = model;
+            data[cbOptions.collection && cbOptions.method != 'create' ? 'collection' : 'model'] = model;
             resolver(data);
 
             //triggers an after:method event
@@ -39,7 +39,7 @@
     var parseArgs = function(method, key, value, _options) {
         var attrs, options;
 
-        if (method === 'save') {
+        if (method === 'save' || method === 'create') {
             if (key === null || typeof key === 'object') {
                 attrs = key;
                 options = value;
@@ -73,10 +73,14 @@
                     if (cbOptions.collection) {
                         //if not silent, trigger a before event
                         if (typeof(options.silent) === 'undefined' || !options.silent) {
-                            model.trigger('before:' + method, model, options);
+                            if (method === 'create') {
+                                model.trigger('before:create', model, attrs, options);
+                            } else {
+                                model.trigger('before:' + method, model, options);
+                            }
                         }
 
-                        proto[method].call(model, options);
+                        proto[method].apply(model, method === 'create' ? [attrs, options] : [options]);
                     }
                     else {
                         //if not silent, trigger a before event

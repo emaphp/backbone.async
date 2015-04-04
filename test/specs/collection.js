@@ -338,4 +338,284 @@ describe("ASync.Collection tests", function() {
             server.respond();
         });
     });
+
+    describe('Create tests', function() {
+        it('must save model', function(done) {
+            var value = {name: 'emaphp', email: 'emaphp@github.com'};
+
+            server.respondWith(
+                'POST',
+                '/contacts',
+                [
+                    200,
+                    {"Content-Type": "application/json"},
+                    JSON.stringify(_.extend({id: 1}, value))
+                ]
+            );
+
+            var collection = new FIXTURES.Contacts();
+
+            collection.create(value, {test: true, silent: false})
+            .then(function(data) {
+                expect(data).to.be.a('object');
+                expect(data).to.have.property('model');
+                expect(data).to.not.have.property('collection');
+                expect(data).to.have.property('response');
+                expect(data).to.have.property('options');
+                expect(data.model).to.be.a('object');
+                expect(data.model.attributes).to.deep.equal(data.response);
+                expect(collection.length).to.equal(1);
+                expect(data.response).to.deep.equal((_.extend({id: 1}, value)));
+                expect(data.options).to.be.a('object');
+                expect(data.options).to.have.property('test');
+                expect(data.options).to.have.property('silent');
+                expect(data.options.test).to.be.true;
+                expect(data.options.silent).to.be.false;
+                done();
+            })
+            .catch(function(err) {
+                done(err);
+            });
+
+            server.respond();
+        });
+
+        it('must call event handlers', function(done) {
+            var value = {name: 'emaphp', email: 'emaphp@github.com'};
+
+            server.respondWith(
+                'POST',
+                '/contacts',
+                [
+                    200,
+                    {"Content-Type": "application/json"},
+                    JSON.stringify(_.extend({id: 1}, value))
+                ]
+            );
+
+            var obj = _.extend({}, Backbone.Events);
+            var beforeCallback = sinon.spy();
+            var afterCallback = sinon.spy();
+            var contacts = new FIXTURES.Contacts();
+            obj.listenTo(contacts, 'before:create', beforeCallback);
+            obj.listenTo(contacts, 'after:create', afterCallback);
+
+            contacts.create(value, {test: true, silent: false})
+            .then(function(data) {
+                expect(beforeCallback.called).to.be.true;
+                expect(afterCallback.called).to.be.true;
+                expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
+
+                var beforeCollection = beforeCallback.args[0][0];
+                var beforeAttrs = beforeCallback.args[0][1];
+                var beforeOptions = beforeCallback.args[0][2];
+                expect(beforeCollection).to.be.a('object');
+                expect(beforeAttrs).to.be.a('object');
+                expect(beforeOptions).to.be.a('object');
+
+                expect(beforeCollection.length).to.equal(1);//'add' is triggered before 'request' (use {wait: true})
+                expect(beforeAttrs).to.deep.equal(value);
+                expect(beforeOptions).to.have.property('test');
+                expect(beforeOptions).to.have.property('silent');
+                expect(beforeOptions.test).to.be.true;
+                expect(beforeOptions.silent).to.be.false;
+
+                var afterModel = afterCallback.args[0][0];
+                var response = afterCallback.args[0][1];
+                var afterOptions = afterCallback.args[0][2];
+                expect(afterModel).to.be.a('object');
+                expect(response).to.be.a('object');
+                expect(afterOptions).to.be.a('object');
+
+                expect(afterModel.attributes).to.be.deep.equal(_.extend({id:1}, beforeAttrs));
+                expect(response).to.deep.equal(afterModel.attributes);
+                expect(afterOptions).to.have.property('test');
+                expect(afterOptions).to.have.property('silent');
+                expect(afterOptions.test).to.be.true;
+                expect(afterOptions.silent).to.be.false;
+
+                var success = afterCallback.args[0][3];
+                expect(success).to.be.true;
+                done();
+            })
+            .catch(function(err) {
+                done(err);
+            });
+
+            server.respond();
+        });
+
+        it('must not call event handlers', function(done) {
+            var value = {name: 'emaphp', email: 'emaphp@github.com'};
+
+            server.respondWith(
+                'POST',
+                '/contacts',
+                [
+                    200,
+                    {"Content-Type": "application/json"},
+                    JSON.stringify(_.extend({id: 1}, value))
+                ]
+            );
+
+            var obj = _.extend({}, Backbone.Events);
+            var beforeCallback = sinon.spy();
+            var afterCallback = sinon.spy();
+            var contacts = new FIXTURES.Contacts();
+            obj.listenTo(contacts, 'before:create', beforeCallback);
+            obj.listenTo(contacts, 'after:create', afterCallback);
+
+            contacts.create(value, {test: false, silent: true})
+            .then(function(data) {
+                expect(beforeCallback.called).to.be.false;
+                expect(afterCallback.called).to.be.false;
+                done();
+            })
+            .catch(function(err) {
+                done(err);
+            });
+
+            server.respond();
+        });
+    });
+
+    describe('Create fail tests', function() {
+        it('must call catch', function(done) {
+            var value = {message: 'Hello World'};
+
+            server.respondWith(
+                'POST',
+                '/notes',
+                [
+                    400,
+                    null,
+                    ''
+                ]
+            );
+
+            var notes = new FIXTURES.Notes();
+
+            notes.create(value, {test: true, silent: false})
+            .then(function(data){})
+            .catch(function(data) {
+                expect(data).to.be.a('object');
+                expect(data).to.have.property('model');
+                expect(data).to.have.property('response');
+                expect(data).to.have.property('options');
+
+                var response = data.response;
+                var options = data.options;
+
+                expect(response.status).to.equal(400);
+                expect(response.statusText).to.equal('Bad Request');
+
+                expect(options).to.be.a('object');
+                expect(options).to.have.property('test');
+                expect(options).to.have.property('silent');
+                expect(options.test).to.be.true;
+                expect(options.silent).to.be.false;
+
+                expect(notes.length).to.equal(1); //'add' before 'request' (use {wait: true})
+
+                done();
+            })
+            .catch(function(err) {done(err);});
+
+            server.respond();
+        });
+
+
+        it('must call event handlers', function(done) {
+            var value = {message: 'Hello World'};
+
+            server.respondWith(
+                'POST',
+                '/notes',
+                [
+                    400,
+                    null,
+                    ''
+                ]
+            );
+
+            var obj = _.extend({}, Backbone.Events);
+            var beforeCallback = sinon.spy();
+            var afterCallback = sinon.spy();
+            var notes = new FIXTURES.Notes();
+            obj.listenTo(notes, 'before:create', beforeCallback);
+            obj.listenTo(notes, 'after:create', afterCallback);
+
+             notes.create(value, {test: true, silent: false})
+             .then(function(data){})
+             .catch(function(data) {
+                expect(beforeCallback.called).to.be.true;
+                expect(afterCallback.called).to.be.true;
+                expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
+
+                var beforeCollection = beforeCallback.args[0][0];
+                var beforeAttrs = beforeCallback.args[0][1];
+                var beforeOptions = beforeCallback.args[0][2];
+                expect(beforeCollection).to.be.a('object');
+                expect(beforeAttrs).to.be.a('object');
+                expect(beforeOptions).to.be.a('object');
+
+                expect(beforeCollection.length).to.equal(1);//'add' is triggered before 'request' (use {wait: true})
+                expect(beforeAttrs).to.deep.equal(value);
+                expect(beforeOptions).to.have.property('test');
+                expect(beforeOptions).to.have.property('silent');
+                expect(beforeOptions.test).to.be.true;
+                expect(beforeOptions.silent).to.be.false;
+
+                var afterModel = afterCallback.args[0][0];
+                var response = afterCallback.args[0][1];
+                var afterOptions = afterCallback.args[0][2];
+                expect(afterModel).to.be.a('object');
+                expect(response).to.be.a('object');
+                expect(afterOptions).to.be.a('object');
+
+                expect(response.status).to.equal(400);
+                expect(afterOptions).to.have.property('test');
+                expect(afterOptions).to.have.property('silent');
+                expect(afterOptions.test).to.be.true;
+                expect(afterOptions.silent).to.be.false;
+
+                var success = afterCallback.args[0][3];
+                expect(success).to.be.false;
+                done();
+             })
+             .catch(function(err) {done(err);});
+            server.respond();
+        });
+
+        it('must not call event handlers', function(done) {
+            var value = {message: 'Hello World'};
+
+            server.respondWith(
+                'POST',
+                '/notes',
+                [
+                    400,
+                    null,
+                    ''
+                ]
+            );
+
+            var obj = _.extend({}, Backbone.Events);
+            var beforeCallback = sinon.spy();
+            var afterCallback = sinon.spy();
+            var notes = new FIXTURES.Notes();
+            obj.listenTo(notes, 'before:create', beforeCallback);
+            obj.listenTo(notes, 'after:create', afterCallback);
+
+            notes.create(value, {test: false, silent: true})
+            .then(function(data){})
+            .catch(function(data) {
+                expect(beforeCallback.called).to.be.false;
+                expect(afterCallback.called).to.be.false;
+                done();
+            })
+            .catch(function(err) {done(err);});
+            server.respond();
+        });
+    });
 });
