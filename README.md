@@ -34,7 +34,7 @@ Backbone.Async is based on @jsantell's [Backbone-Promised](https://github.com/js
 Browsers not supporting Promises should use a polyfill. You can find one [here](https://github.com/taylorhakes/promise-polyfill "").
 
 <br/>
-###Examples
+###Usage
 
 <br/>
 **Backbone.Async.Collection**
@@ -46,30 +46,30 @@ var Contacts = Backbone.Async.Collection.extend({
 var contacts = new Contacts();
 
 //fetching a collection
-contacts.fetch()
+contacts.fetch({foo: 'bar'})
 .then(function(data) {
-    console.log('Collection fetched correctly');
+    var collection = data.collection,
+        response = data.response,
+        options = data.options;
+
+    console.log('Collection has a total of', collection.length, 'models');
+    console.log('Response:', JSON.stringify(response);
+    console.log('Options used:' JSON.stringify(options));
 })
 .catch(function(data) {
-    if (_.isError(data))
-        console.error(data)
-    else
+    if (_.isError(data)) {
+        console.error(data);
+    } else {
         console.log('Failed to fetch collection:', data.response.statusText);
+    }
 });
 ```
-
-Callbacks used with *Collection::fetch* will receive an object containing the following properties:
-
- * collection: The collection instance.
- * response: On success, a JSON object with the values received. On error, an XHR instance.
- * options: Options used for this request.
-
 
 <br/>
 **Backbone.Async.Model**
 ```javascript
 var Contact = Backbone.Async.Model.extend({
-    urlRoot: 'http://example.com/contacts'
+    urlRoot: '/contacts'
 });
 
 var contact = new Contact({id: 1});
@@ -77,19 +77,26 @@ var contact = new Contact({id: 1});
 //fetch by id
 contact.fetch()
 .then(function(data) {
-    console.log('Contact fetched correctly');    
+    var model = data.model,
+        response = data.response,
+        options = data.options;
+
+    console.log('Collection has a total of', collection.length, 'models');
+    console.log('Response:', JSON.stringify(response);
+    console.log('Options used:' JSON.stringify(options));
 })
 .catch(function(data) {
-    if (_.isError(data))
+    if (_.isError(data)) {
         console.error(data)
-    else
+    } else {
         console.log('Failed to fetch contact:', data.response.statusText);
+    }
 });
 ```
 
-Callbacks used with *Model::fetch/save/destroy* will receive an object containing the following properties:
+Resolve and rejection callbacks receive a single argument containing the following properties:
 
- * model: The model instance.
+ * model / collection: The model or collection instance that invokes the synchronization method.
  * response: On success, a JSON object with the values received. On error, an XHR instance.
  * options: Options used for this request.
 
@@ -100,8 +107,74 @@ Callbacks used with *Model::fetch/save/destroy* will receive an object containin
 <br/>
 Backbone.Async adds additional events when synchronizing a Model or Collection.
 
+#####Model events
+
+```javascript
+var Contact = Backbone.Async.Contact.extend({
+    urlRoot: '/contacts'
+});
+
+var contact = new Contact({id: 1});
+
+contact.on('before:fetch', function(model, options) {
+    console.log('Contact is being fetched...');
+});
+
+contact.on('after:save', function(model, response, options, success) {
+    if (success) {
+        console.log('Contact is being saved...');
+    } else {
+        //if unsuccessful, response is a XHR instance
+        console.log('Server responded with', response.status, 'status:', response.statusText);
+    }
+});
+
+//fetch contact
+contact.fetch()
+.then(function(data) {
+    console.log('Contact fetched correctly');
+    
+    //update values and save
+    contact.set({name: 'emaphp', email: 'emaphp@github.com'});
+    contact.save()
+    .then(function(data) {
+        console.log('Contact saved');
+    })
+    .catch(function(data) {
+        console.log('Something went wrong');
+    });
+})
+.catch(function(data) {
+    console.log('Something went wrong');
+});
+```
+
 <br/>
-**Backbone.Async.Collection**
+**before:fetch**
+> function(model:*Async.Model*, options:*object*)
+
+<br/>
+**after:fetch**
+> function(model:*Async.Model*, response:*object*, options:*object*, success:*boolean*)
+
+<br/>
+**before:save**
+> function(model:*Async.Model*, attrs:*object*, options:*object*)
+
+<br/>
+**after:save**
+> function(model:*Async.Model*, response:*object*, options:*object*, success:*boolean*)
+
+<br/>
+**before:destroy**
+> function(model:*Async.Model*, options:*object*)
+
+<br/>
+**after:destroy**
+> function(model:*Async.Model*, response:*object*, options:*object*, success:*boolean*)
+
+<br/>
+#####Collection events
 
 ```javascript
 var Contacts = Backbone.Async.Collection.extend({
@@ -134,58 +207,28 @@ contacts.fetch()
 });
 ```
 
-The *before:fetch* handler will receive an object containing the following properties:
+<br/>
+**before:fetch**
+> function(model:*Async.Collection*, options:*object*)
 
- * collection: The collection instance.
- * options: The options provided.
+<br/>
+**after:fetch**
+> function(model:*Async.Collection*, response:*object*, options:*object*, success:*boolean*)
+
+<br/>
+**before:create**
+> function(model:*Async.Collection*, attrs:*object*, options:*object*)
+
+<br/>
+**after:create**
+> function(model:*Async.Model*, response:*object*, options:*object*, success:*boolean*)
 
 
-The *after:fetch* event handler receives the exact same object provided to the fulfilled and rejection callbacks plus an additional argument indicating if *fetch* was succesfull or not.
 
 <br/>
 **Backbone.Async.Model**
 
-```javascript
-var Contact = Backbone.Async.Contact.extend({
-    urlRoot: '/contacts'
-});
 
-var contact = new Contact({id: 1});
-
-//setup event listener
-var obj = {
-    beforeFetch: function(data) {
-        console.log('Contact is being fetched...');
-    },
-    
-    beforeSave: function(data) {
-        console.log('Contact is being saved...');
-    }
-};
-
-_.extend(obj, Backbone.Events);
-obj.listenTo(contact, 'before:fetch', obj.beforeFetch);
-obj.listenTo(contact, 'before:save', obj.beforeSave);
-
-//fetch contact
-contact.fetch()
-.then(function(data) {
-    console.log('Contact fetched correctly');
-    
-    //update values and save
-    contact.set({name: 'emaphp', email: 'emaphp@github.com'});
-    contact.save()
-    .then(function(data) {
-        console.log('Contact saved');
-    })
-    .catch(function(data) {
-        console.log('Something went wrong');
-    });
-})
-.catch(function(data) {
-    console.log('Something went wrong');
-});
-```
 
 The *before:fetch* and *before:destroy* event handlers will receive an object containing the following properties:
 
