@@ -110,7 +110,7 @@
 
     //create namespace
     var Async = Backbone.Async = Backbone.Async || {};
-    Async.VERSION = '1.2.0';
+    Async.Version = '1.2.0';
 
     //extend Model and Collection prototypes
     Async.Model = Backbone.Model.extend(
