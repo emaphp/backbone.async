@@ -30,7 +30,7 @@
             resolver(data);
 
             //triggers an after:method event
-            if (typeof(options.silent) === 'undefined' || !options.silent) {
+            if (!options.silent) {
                 model.trigger('after:' + cbOptions.method, model, response, options, cbOptions._success);
             }
         };
@@ -75,7 +75,7 @@
 
                     if (cbOptions.collection) {
                         //if not silent, trigger a before event
-                        if (typeof(options.silent) === 'undefined' || !options.silent) {
+                        if (!options.silent) {
                             if (method === 'create') {
                                 model.trigger('before:create', model, attrs, options);
                             } else {
@@ -87,7 +87,7 @@
                     }
                     else {
                         //if not silent, trigger a before event
-                        if (typeof(options.silent) === 'undefined' || !options.silent) {
+                        if (!options.silent) {
                             if (method === 'save') {
                                 model.trigger('before:save', model, attrs, options);
                             } else {
@@ -155,7 +155,7 @@
             this._initCollection();
             options = options || {};
             var self = this,
-                mustTrigger = (typeof(options.silent) === 'undefined') || !options.silent;
+                mustTrigger = !options.silent;
 
             return new Promise(function(resolve, reject) {
                 if (mustTrigger) {
@@ -204,7 +204,7 @@
             this._initCollection();
             options = options || {};
             var self = this,
-                mustTrigger = (typeof(options.silent) === 'undefined') || !options.silent;
+                mustTrigger = !options.silent;
 
             return new Promise(function(resolve, reject) {
                 var model = new self.Model();
@@ -220,7 +220,7 @@
                         self.trigger('after:fetch', data.model, data.response, data.options, true);
                     }
 
-                    self.collection.push(model);
+                    self.collection.add(model);
                     self.listenToOnce(model, 'after:destroy', function(model, options, success) {
                         if (success) {
                             self.collection.remove(model, _.extend({silent: true}, options));
@@ -268,7 +268,7 @@
             this._initCollection();
             options = options || {};
             var self = this,
-                mustTrigger = (typeof(options.silent) === 'undefined') || !options.silent;
+                mustTrigger = !options.silent;
 
             return new Promise(function(resolve, reject) {
                 if (mustTrigger) {
@@ -281,6 +281,7 @@
                         self.trigger('after:create', data.model, data.response, data.options, true);
                     }
 
+                    self.collection.add(data.model);
                     self.listenToOnce(data.model, 'after:destroy', function(model, options, success) {
                         if (success) {
                             self.collection.remove(model, _.extend({silent: true}, options));

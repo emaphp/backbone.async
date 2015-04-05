@@ -5,13 +5,13 @@ Backbone Models meet Promises
 ###About
 
 <br/>
-Backbone.Async introduces a Model and a Collection class that wrap their syncronization methods using [Promises](http://www.html5rocks.com/en/tutorials/es6/promises/ "").
+*Backbone.Async* is a *Backbone.js* extension that introduces a Model and a Collection class using [Promises](http://www.html5rocks.com/en/tutorials/es6/promises/ "") as a return value for its syncronization methods.
 
 <br/>
 ###Acknowledgement
 
 <br/>
-Backbone.Async is based on @jsantell's [Backbone-Promised](https://github.com/jsantell/backbone-promised "").
+*Backbone.Async* is based on @jsantell's [Backbone-Promised](https://github.com/jsantell/backbone-promised "").
 
 <br/>
 ###Installation
@@ -31,7 +31,7 @@ Backbone.Async is based on @jsantell's [Backbone-Promised](https://github.com/js
 ###Polyfill
 
 <br/>
-Browsers not supporting Promises should use a polyfill. You can find one [here](https://github.com/taylorhakes/promise-polyfill "").
+Browsers not supporting Promises should use a polyfill. This library uses [promise-polyfill](https://github.com/taylorhakes/promise-polyfill "") for testing.
 
 <br/>
 ###Usage
@@ -81,7 +81,7 @@ contact.fetch()
         response = data.response,
         options = data.options;
 
-    console.log('Collection has a total of', collection.length, 'models');
+    console.log('Model Id:', model.id);
     console.log('Response:', JSON.stringify(response);
     console.log('Options used:' JSON.stringify(options));
 })
@@ -100,14 +100,17 @@ Resolve and rejection callbacks receive a single argument containing the followi
  * response: On success, a JSON object with the values received. On error, an XHR instance.
  * options: Options used for this request.
 
+<br/>
+*Async.Collection.create* is a special case being that its resolver does receive a model instead of a collection.
+
 
 <br/>
 ###Events
 
 <br/>
-Backbone.Async adds additional events when synchronizing a Model or Collection.
+*Backbone.Async* adds additional before/after events when synchronizing a Model or Collection.
 
-#####Model events
+#####Async Model events
 
 ```javascript
 var Contact = Backbone.Async.Contact.extend({
@@ -120,29 +123,10 @@ contact.on('before:fetch', function(model, options) {
     console.log('Contact is being fetched...');
 });
 
-contact.on('after:save', function(model, response, options, success) {
-    if (success) {
-        console.log('Contact is being saved...');
-    } else {
-        //if unsuccessful, response is a XHR instance
-        console.log('Server responded with', response.status, 'status:', response.statusText);
-    }
-});
-
 //fetch contact
 contact.fetch()
 .then(function(data) {
     console.log('Contact fetched correctly');
-    
-    //update values and save
-    contact.set({name: 'emaphp', email: 'emaphp@github.com'});
-    contact.save()
-    .then(function(data) {
-        console.log('Contact saved');
-    })
-    .catch(function(data) {
-        console.log('Something went wrong');
-    });
 })
 .catch(function(data) {
     console.log('Something went wrong');
@@ -151,30 +135,30 @@ contact.fetch()
 
 <br/>
 **before:fetch**
-> function(model:*Async.Model*, options:*object*)
+> Arguments: *Async.Model* ***model***, *object* ***options***
 
 <br/>
 **after:fetch**
-> function(model:*Async.Model*, response:*object*, options:*object*, success:*boolean*)
+> Arguments: *Async.Model* ***model***, *object* ***response***, *object* ***options***, *boolean* ***success***
 
 <br/>
 **before:save**
-> function(model:*Async.Model*, attrs:*object*, options:*object*)
+> Arguments: *Async.Model* ***model***, *object* ***attributes***, *object* ***options***
 
 <br/>
 **after:save**
-> function(model:*Async.Model*, response:*object*, options:*object*, success:*boolean*)
+> Arguments: *Async.Model* ***model***, *object* ***response***, *object* ***options***, *boolean* ***success***
 
 <br/>
 **before:destroy**
-> function(model:*Async.Model*, options:*object*)
+> Arguments: *Async.Model* ***model***, *object* ***options***
 
 <br/>
 **after:destroy**
-> function(model:*Async.Model*, response:*object*, options:*object*, success:*boolean*)
+> Arguments: *Async.Model* ***model***, *object* ***response***, *object* ***options***, *boolean* ***success***
 
 <br/>
-#####Collection events
+#####Async Collection events
 
 ```javascript
 var Contacts = Backbone.Async.Collection.extend({
@@ -183,73 +167,54 @@ var Contacts = Backbone.Async.Collection.extend({
 
 var contacts = new Contacts();
 
-//setup event listener
-var obj = {
-    beforeFetch: function(data) {
-        console.log('Contacts are being fetched...');
-    },
-    afterFetch: function(data, success) {
-        if (!success) console.log("Contacts couldn't be fetched...");
-    }    
-};
-
-_.extend(obj, Backbone.Events);
-obj.listenTo(contacts, 'before:fetch', obj.beforeFetch);
-obj.listenTo(contacts, 'after:fetch', obj.afterFetch);
+contacts.on('after:fetch', function(collection, response, options, success) {
+    if (!success) {
+        console.log('Error:' + _.isError(collection) ? collection : response.statusText);
+    }
+});
 
 //fetch contacts
 contacts.fetch()
 .then(function(data) {
-    console.log('Contacts fetched correctly');
+    //render collection
 })
 .catch(function(data) {
-    console.log('Something went wrong');
+    //handle error
 });
 ```
 
 <br/>
 **before:fetch**
-> function(model:*Async.Collection*, options:*object*)
+> Arguments: *Async.Collection* ***collection***, *object* ***options***
 
 <br/>
 **after:fetch**
-> function(model:*Async.Collection*, response:*object*, options:*object*, success:*boolean*)
+> Arguments: *Async.Collection* ***collection***, *object* ***response***, *object* options, *boolean* ***success***
 
 <br/>
 **before:create**
-> function(model:*Async.Collection*, attrs:*object*, options:*object*)
+> Arguments: *Async.Collection* ***collection***, *object* ***attributes***, *object* ***options***
 
 <br/>
 **after:create**
-> function(model:*Async.Model*, response:*object*, options:*object*, success:*boolean*)
+> Arguments: *Async.Model* ***model***, *object* ***response***, *object* ***options***, *boolean* ***success***
 
-
-
-<br/>
-**Backbone.Async.Model**
-
-
-
-The *before:fetch* and *before:destroy* event handlers will receive an object containing the following properties:
-
- * model: The model instance.
- * options: The options provided.
-
-The *before:save* event handler argument also includes an additional property named *attrs* with the attributes being saved. All *after:[event]* handlers receive the exact same object provided to the fulfilled and rejection callbacks plus a *success* argument.
+As a general rule, if an error is thrown during the execution of a method the event handler will call the *after* callback providing the error as first argument.
 
 <br/>
 ###Storage
 
 <br/>
-The Storage class provides an additional wrapper for Model and Collection classes.
+The *Async.Storage* class provides an additional wrapper for Model and Collection classes.
 
 ```javascript
 var Note = Backbone.Async.Model.extend({
-    //...
+    urlRoot: '/notes'
 });
 
 var Notes = Backbone.Async.Collection.extend({
-    //...
+    url: '/notes',
+    model: Note
 });
 
 //extend the Storage class
@@ -262,66 +227,116 @@ var storage = new NotesStore();
 ```
 
 <br/>
+**Fetch model**
+```javascript
+//obtain model with ID 1
+storage.fetch(1, {foo: 'var'})
+.then(function(data) {
+    var note = storage.get(1); //storage.collection.get(1)
+    
+    //if model was already loaded then 'fetch' returns a resolved promise
+    //if a request was made then the property 'response' is available
+    if (data.response) {
+        console.log('A request has been made');
+    }
+})
+.catch(function(data) {
+    if (_.isError(data_or_err)) {
+        console.error(data);
+    } else {
+        console.log('Error:', data.response.statusText);
+    }
+});
+```
+
+<br/>
+**Fetch collection**
+
+```javascript
+//fetch all models
+storage.fetchAll({foo: 'var'})
+.then(function(data) {
+    storage.loaded; //returns true
+    
+    //get collection
+    var collection = storage.collection; //or data.collection
+    
+    //same response rule applies to 'fetchAll'    
+    if (data.response) {
+        console.log('A request has been made');
+    }
+})
+.catch(function(data) {
+    if (_.isError(data)) {
+        console.error(data);
+    } else {
+        console.log(data.response.statusText);
+    }
+});
+```
+
+<br/>
 **Storing models**
 ```javascript
 var note = new Note({message: 'Hello'});
 
+//save model
 note.save()
 .then(function(data) {
     storage.store(model);
-    console.log('Model saved');
 })
 .catch(function(data) {
-    console.log('Failed to save model:', data.response.statusText);
+    if (_.isError(data)) {
+        console.error(data);
+    } else {
+        console.log('Failed to save model:', data.response.statusText);
+    }
 });
 ```
 
 <br/>
-**Get model**
+**Creating models**
 ```javascript
-//obtain model with ID 1
-storage.get(1, {option: 'value'})
+var model = {name: 'emaphp', email: 'emaphp@github.com'};
+
+storage.create(model, {foo: 'bar'})
 .then(function(data) {
-    var note = storage.collection.get(1); //returns model
-    
-    //the 'get' method can be called more than once
-    //the returned model will be stored internally
-    //the 'response' property will not be set if the object was alreasy loaded
-    if (data.response) {
-        console.log('A request has been made');
-    }
+    //...
 })
-.catch(function(data_or_err) {
-    if (_.isError(data_or_err))
-        console.error(err);
-    else
-        console.log(data.statusText);
+.catch(function(data) {
+    if (_.isError(data)) {
+    } else {
+        console.log('Failed to save model:', data.response.statusText);
+    }
 });
 ```
 
 <br/>
-**Get collection**
+#####Storage events
 
-```javascript
-//fetch all models
-storage.fetch({option: 'value'})
-.then(function(data) {
-    storage.isLoaded === true; //returns true
+<br/>
+**before:fetch**
+> Arguments: *Async.Model* ***model***, *object* ***options***
 
-    //same response rule applies to 'fetch'    
-    if (data.response) {
-        console.log('A request has been made');
-    }
-})
-.catch(function(data_or_err) {
-    if (_.isError(data_or_err))
-        console.error(err);
-    else
-        console.log(data.statusText);
-});
-```
+<br/>
+**after:fetch**
+> Arguments: *Async.Model* ***model***, *object* ***response***, *object* ***options***, *boolean* ***success***
 
-The Storage class also triggers before/after events when *get* and *fetch* are called.
+<br/>
+**before:fetchAll**
+> Arguments: *Async.Collection* ***collection***, *object* ***options***
+
+<br/>
+**after:fetchAll**
+> Arguments: *Async.Collection* ***collection***, *object* ***response***, *object* ***options***, *boolean* ***success***
+
+<br/>
+**before:create**
+> Arguments: *Async.Collection* ***collection***, *object* ***attributes***, *object* ***options***
+
+<br/>
+**after:create**
+> Arguments: *Async.Model* ***model***, *object* ***response***, *object* ***options***, *boolean* ***success***
 
 <br/>
 ###License
