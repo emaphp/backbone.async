@@ -281,7 +281,6 @@
                         self.trigger('after:create', data.model, data.response, data.options, true);
                     }
 
-                    self.collection.add(data.model);
                     self.listenToOnce(data.model, 'after:destroy', function(model, options, success) {
                         if (success) {
                             self.collection.remove(model, _.extend({silent: true}, options));

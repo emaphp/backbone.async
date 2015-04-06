@@ -917,4 +917,387 @@ describe("ASync.Storage tests", function() {
             server.respond();
         });
     });
+
+    describe('Create tests', function() {
+        it('must call then', function(done) {
+            var value = { name: "Emmanuel", surname: "Antico"};
+
+            server.respondWith(
+                'POST',
+                '/contacts',
+                [
+                    200,
+                    {'Content-type': 'application/json'},
+                    JSON.stringify(_.extend({id: 1}, value))
+                ]
+            );
+
+            var storage = new FIXTURES.ContactsStorage();
+
+            storage.create(value, {test: true, silent: false})
+            .then(function(data) {
+                expect(data).to.be.a('object');
+                expect(data).to.have.property('model');
+                expect(data).to.have.property('response');
+                expect(data).to.have.property('options');
+
+                expect(data.response).to.deep.equal(_.extend({id: 1}, value));
+                expect(data.model.attributes).to.deep.equal(data.response);
+                expect(data.model.id).to.equal(1);
+
+                expect(data.options).to.have.property('test');
+                expect(data.options).to.have.property('silent');
+                expect(data.options.test).to.be.true;
+                expect(data.options.silent).to.be.false;
+
+                expect(storage.collection.length).to.equal(1);
+                done();
+            })
+            .catch(function(err){done(err)});
+
+            server.respond();
+        });
+
+        it('must call event handlers', function(done) {
+            var value = { name: "Emmanuel", surname: "Antico"};
+
+            server.respondWith(
+                'POST',
+                '/contacts',
+                [
+                    200,
+                    {'Content-type': 'application/json'},
+                    JSON.stringify(_.extend({id: 1}, value))
+                ]
+            );
+
+            var obj = _.extend({}, Backbone.Events);
+            var beforeCallback = sinon.spy();
+            var afterCallback = sinon.spy();
+
+            var storage = new FIXTURES.ContactsStorage();
+            obj.listenTo(storage, 'before:create', beforeCallback);
+            obj.listenTo(storage, 'after:create', afterCallback);
+
+            storage.create(value, {test: true, silent: false})
+            .then(function(data) {
+                expect(beforeCallback.called).to.be.true;
+                expect(afterCallback.called).to.be.true;
+                expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
+
+                var beforeCollection = beforeCallback.args[0][0];
+                var beforeAttrs = beforeCallback.args[0][1];
+                var beforeOptions = beforeCallback.args[0][2];
+
+                expect(beforeCollection).to.be.a('object');
+                expect(beforeAttrs).to.be.a('object');
+                expect(beforeOptions).to.be.a('object');
+
+                expect(beforeCollection.length).to.equal(1);
+                expect(beforeAttrs).to.deep.equal(value);
+                expect(beforeOptions).to.have.property('test');
+                expect(beforeOptions).to.have.property('silent');
+                expect(beforeOptions.test).to.be.true;
+                expect(beforeOptions.silent).to.be.false;
+
+                var afterModel = afterCallback.args[0][0];
+                var response = afterCallback.args[0][1];
+                var afterOptions = afterCallback.args[0][2];
+
+                expect(afterModel).to.be.a('object');
+                expect(response).to.be.a('object');
+                expect(afterOptions).to.be.a('object');
+
+                expect(afterModel.attributes).to.deep.equal(_.extend({id: 1}, value));
+                expect(response).to.deep.equal(afterModel.attributes);
+                expect(afterOptions).to.have.property('test');
+                expect(afterOptions).to.have.property('silent');
+                expect(afterOptions.test).to.be.true;
+                expect(afterOptions.silent).to.be.false;
+
+                var success = afterCallback.args[0][3];
+                expect(success).to.be.true;
+
+                var model = storage.get(1);
+                expect(model.attributes).to.deep.equal(response);
+
+                done();
+            })
+            .catch(function(err){done(err)});
+
+            server.respond();
+        });
+
+        it('must not call event handlers', function(done) {
+            var value = { name: "Emmanuel", surname: "Antico"};
+
+            server.respondWith(
+                'POST',
+                '/contacts',
+                [
+                    200,
+                    {'Content-type': 'application/json'},
+                    JSON.stringify(_.extend({id: 1}, value))
+                ]
+            );
+
+            var obj = _.extend({}, Backbone.Events);
+            var beforeCallback = sinon.spy();
+            var afterCallback = sinon.spy();
+
+            var storage = new FIXTURES.ContactsStorage();
+            obj.listenTo(storage, 'before:create', beforeCallback);
+            obj.listenTo(storage, 'after:create', afterCallback);
+
+            storage.create(value, {test: false, silent: true})
+            .then(function(data) {
+                expect(beforeCallback.called).to.be.false;
+                expect(afterCallback.called).to.be.false;
+                done();
+            })
+            .catch(function(err){ done(err); });
+
+            server.respond();
+        });
+    });
+
+    describe('Create fail tests', function() {
+        it('must call cath', function(done) {
+            server.respondWith(
+                'POST',
+                '/notes',
+                [
+                    400,
+                    null,
+                    ''
+                ]
+            );
+
+            var storage = new FIXTURES.NotesStorage();
+
+            storage.create({message: 'Hello World'}, {test: true, silent: false})
+            .then(function(data){})
+            .catch(function(data) {
+                expect(data).to.be.a('object');
+                expect(data).to.have.property('model');
+                expect(data).to.have.property('response');
+                expect(data).to.have.property('options');
+
+                expect(data.response).to.be.a('object');
+                expect(data.response.status).to.equal(400);
+                expect(data.response.statusText).to.equal('Bad Request');
+
+                expect(data.options).to.be.a('object');
+                expect(data.options).to.have.property('test');
+                expect(data.options).to.have.property('silent');
+                expect(data.options.test).to.be.true;
+                expect(data.options.silent).to.be.false;
+
+                expect(storage.collection.length).to.equal(1);
+                expect(data.model.attributes).to.deep.equal({message: 'Hello World'});
+                expect(data.model.id).to.be.undefined;
+
+                done();
+            });
+
+            server.respond();
+        });
+
+        it('must not call add', function(done) {
+            server.respondWith(
+                'POST',
+                '/notes',
+                [
+                    400,
+                    null,
+                    ''
+                ]
+            );
+
+            var storage = new FIXTURES.NotesStorage();
+
+            storage.create({message: 'Hello World'}, {wait: true})
+            .then(function(data){})
+            .catch(function(data) {
+                expect(storage.collection.length).to.equal(0);
+                done();
+            });
+
+            server.respond();
+
+        });
+
+        it('must call event handlers', function(done) {
+            var value = {message: 'Hello World'};
+
+            server.respondWith(
+                'POST',
+                '/notes',
+                [
+                    400,
+                    null,
+                    ''
+                ]
+            );
+
+            var obj = _.extend({}, Backbone.Events);
+            var beforeCallback = sinon.spy();
+            var afterCallback = sinon.spy();
+
+            var storage = new FIXTURES.NotesStorage();
+            obj.listenTo(storage, 'before:create', beforeCallback);
+            obj.listenTo(storage, 'after:create', afterCallback);
+
+            storage.create(value, {test: true, silent: false})
+            .then(function(data){})
+            .catch(function(data) {
+                expect(beforeCallback.called).to.be.true;
+                expect(afterCallback.called).to.be.true;
+                expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
+
+                var beforeCollection = beforeCallback.args[0][0];
+                var beforeAttrs = beforeCallback.args[0][1];
+                var beforeOptions = beforeCallback.args[0][2];
+
+                expect(beforeCollection).to.be.a('object');
+                expect(beforeAttrs).to.be.a('object');
+                expect(beforeOptions).to.be.a('object');
+
+                expect(beforeCollection.length).to.equal(1);
+                expect(beforeAttrs).to.deep.equal(value);
+                expect(beforeOptions).to.have.property('test');
+                expect(beforeOptions).to.have.property('silent');
+                expect(beforeOptions.test).to.be.true;
+                expect(beforeOptions.silent).to.be.false;
+
+                var afterModel = afterCallback.args[0][0];
+                var response = afterCallback.args[0][1];
+                var afterOptions = afterCallback.args[0][2];
+
+                expect(afterModel).to.be.a('object');
+                expect(response).to.be.a('object');
+                expect(afterOptions).to.be.a('object');
+
+                expect(afterModel.attributes).to.deep.equal(value);
+                expect(afterModel.id).to.be.undefined;
+                expect(response.status).to.equal(400);
+                expect(response.statusText).to.equal('Bad Request');
+                expect(afterOptions).to.have.property('test');
+                expect(afterOptions).to.have.property('silent');
+                expect(afterOptions.test).to.be.true;
+                expect(afterOptions.silent).to.be.false;
+
+                var success = afterCallback.args[0][3];
+                expect(success).to.be.false;
+
+                done();
+            })
+            .catch(function(err){done(err)});
+
+            server.respond();
+        });
+
+        it('must not call event handlers', function(done) {
+            var value = {message: "Hello World"};
+
+            server.respondWith(
+                'POST',
+                '/notes',
+                [
+                    400,
+                    null,
+                    ''
+                ]
+            );
+
+            var obj = _.extend({}, Backbone.Events);
+            var beforeCallback = sinon.spy();
+            var afterCallback = sinon.spy();
+
+            var storage = new FIXTURES.NotesStorage();
+            obj.listenTo(storage, 'before:create', beforeCallback);
+            obj.listenTo(storage, 'after:create', afterCallback);
+
+            storage.create(value, {test: false, silent: true})
+            .then(function(data){})
+            .catch(function(data) {
+                expect(beforeCallback.called).to.be.false;
+                expect(afterCallback.called).to.be.false;
+                done();
+            });
+
+            server.respond();
+        });
+
+        it('must throw error', function(done) {
+            var value = {message: "Hello World"};
+
+            server.respondWith(
+                'POST',
+                '/notes',
+                [
+                    200,
+                    {'Content-type': 'application/json'},
+                    JSON.stringify(_.extend({id:1}, value))
+                ]
+            );
+
+            var storage = new FIXTURES.NotesStorage();
+
+            storage.create(value)
+            .then(function() {
+                throw new Error();
+            })
+            .catch(function(data) {
+                expect(_.isError(data)).to.be.true;
+                done();
+            });
+
+            server.respond();
+        });
+
+        it('must remove model', function(done) {
+            var value = {message: "Hello World"};
+
+            server.respondWith(
+                'POST',
+                '/notes',
+                [
+                    200,
+                    {'Content-type': 'application/json'},
+                    JSON.stringify(_.extend({id:1}, value))
+                ]
+            );
+
+            server.respondWith(
+                'DELETE',
+                '/notes/1',
+                [
+                    204,
+                    null,
+                    ''
+                ]
+            );
+
+            var storage = new FIXTURES.NotesStorage();
+
+            storage.create(value, {wait: true})
+            .then(function(data) {
+                var model = data.model;
+                expect(storage.collection.length).to.equal(1);
+
+                model.destroy({wait: true})
+                .then(function(data) {
+                      expect(storage.collection.length).to.equal(0);
+                      done();
+                })
+                .catch(function(err){done(err)});
+
+                server.respond();
+            })
+            .catch(function(err) {done(err)});
+
+            server.respond();
+        });
+    });
 });
