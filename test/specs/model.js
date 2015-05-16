@@ -103,28 +103,40 @@ describe("ASync.Model tests", function() {
         });
 
         it('must call event handlers', function(done) {
+            var value = { id: 5, name: "Emmanuel", surname: "Antico"};
+
             server.respondWith(
                 'GET',
                 '/contacts/5',
                 [
                     200,
                     {"Content-Type": "application/json"},
-                    JSON.stringify({ id: 5, name: "Emmanuel", surname: "Antico"})
+                    JSON.stringify(value)
                 ]
             );
 
             var obj = _.extend({}, Backbone.Events);
             var beforeCallback = sinon.spy();
             var afterCallback = sinon.spy();
+            var successCallback = sinon.spy();
+            var completeCallback = sinon.spy();
             var contact = new FIXTURES.Contact({id: 5});
             obj.listenTo(contact, 'before:fetch', beforeCallback);
             obj.listenTo(contact, 'after:fetch', afterCallback);
 
-            contact.fetch({test: true, silent:false})
+            contact.fetch({
+                test: true,
+                silent:false,
+                success: successCallback,
+                complete: completeCallback
+            })
             .then(function(data) {
                 expect(beforeCallback.called).to.be.true;
                 expect(afterCallback.called).to.be.true;
-                expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
+                
+                expect(beforeCallback.calledBefore(successCallback)).to.be.true;
+                expect(successCallback.calledBefore(afterCallback)).to.be.true;
+                expect(afterCallback.calledBefore(completeCallback)).to.be.true;
 
                 var beforeModel = beforeCallback.args[0][0];
                 var beforeOptions = beforeCallback.args[0][1];
@@ -155,6 +167,19 @@ describe("ASync.Model tests", function() {
 
                 var success = afterCallback.args[0][3];
                 expect(success).to.be.true;
+
+                var successModel = successCallback.args[0][0];
+                expect(successModel).to.deep.equal(contact);
+                var successResponse = successCallback.args[0][1];
+                expect(successResponse).to.deep.equal(value);
+                var successOptions = successCallback.args[0][2];
+                expect(successOptions.test).to.be.true;
+                expect(successOptions.silent).to.be.false;
+
+                var completeResponse = completeCallback.args[0][0];
+                expect(completeResponse.status).to.equal(200);
+                var completeStatus = completeCallback.args[0][1];
+                expect(completeStatus).to.equal('success');
                 
                 done();
             })
@@ -243,17 +268,27 @@ describe("ASync.Model tests", function() {
             var obj = _.extend({}, Backbone.Events);
             var beforeCallback = sinon.spy();
             var afterCallback = sinon.spy();
+            var errorCallback = sinon.spy();
+            var completeCallback = sinon.spy();
             var note = new FIXTURES.Note({id: 3});
             obj.listenTo(note, 'before:fetch', beforeCallback);
             obj.listenTo(note, 'after:fetch', afterCallback);
 
-            note.fetch({test: true, silent: false})
+            note.fetch({
+                test: true,
+                silent: false,
+                error: errorCallback,
+                complete: completeCallback
+            })
             .then(function() {
             })
             .catch(function(data) {
                 expect(beforeCallback.called).to.be.true;
                 expect(afterCallback.called).to.be.true;
-                expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
+
+                expect(beforeCallback.calledBefore(errorCallback)).to.be.true;
+                expect(errorCallback.calledBefore(afterCallback)).to.be.true;
+                expect(afterCallback.calledBefore(completeCallback)).to.be.true;
 
                 var beforeModel = beforeCallback.args[0][0];
                 var beforeOptions = beforeCallback.args[0][1];
@@ -283,6 +318,19 @@ describe("ASync.Model tests", function() {
 
                 var success = afterCallback.args[0][3];
                 expect(success).to.be.false;
+
+                var errorModel = errorCallback.args[0][0];
+                expect(errorModel).to.deep.equal(note);
+                var errorResponse = errorCallback.args[0][1];
+                expect(errorResponse.status).to.equal(500);
+                var errorOptions = errorCallback.args[0][2];
+                expect(errorOptions.test).to.be.true;
+                expect(errorOptions.silent).to.be.false;
+
+                var completeResponse = completeCallback.args[0][0];
+                expect(completeResponse.status).to.equal(500);
+                var completeStatus = completeCallback.args[0][1];
+                expect(completeStatus).to.equal('error');
 
                 done();
             });
@@ -439,15 +487,25 @@ describe("ASync.Model tests", function() {
             var obj = _.extend({}, Backbone.Events);
             var beforeCallback = sinon.spy();
             var afterCallback = sinon.spy();
+            var successCallback = sinon.spy();
+            var completeCallback = sinon.spy();
             var contact = new FIXTURES.Contact(value);
             obj.listenTo(contact, 'before:save', beforeCallback);
             obj.listenTo(contact, 'after:save', afterCallback);
 
-            contact.save(value, {test: true, silent:false})
+            contact.save(value, {
+                test: true,
+                silent:false,
+                success: successCallback,
+                complete: completeCallback
+            })
             .then(function(data) {
                 expect(beforeCallback.called).to.be.true;
                 expect(afterCallback.called).to.be.true;
-                expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
+
+                expect(beforeCallback.calledBefore(successCallback)).to.be.true;
+                expect(successCallback.calledBefore(afterCallback)).to.be.true;
+                expect(afterCallback.calledBefore(completeCallback)).to.be.true;
 
                 var beforeModel = beforeCallback.args[0][0];
                 var beforeAttrs = beforeCallback.args[0][1];
@@ -478,6 +536,19 @@ describe("ASync.Model tests", function() {
 
                 var success = afterCallback.args[0][3];
                 expect(success).to.be.true;
+
+                var successModel = successCallback.args[0][0];
+                expect(successModel).to.deep.equal(contact);
+                var successResponse = successCallback.args[0][1];
+                expect(successResponse).to.deep.equal(value);
+                var successOptions = successCallback.args[0][2];
+                expect(successOptions.test).to.be.true;
+                expect(successOptions.silent).to.be.false;
+
+                var completeResponse = completeCallback.args[0][0];
+                expect(completeResponse.status).to.equal(200);
+                var completeStatus = completeCallback.args[0][1];
+                expect(completeStatus).to.equal('success'); 
                 
                 done();
             })
@@ -603,17 +674,27 @@ describe("ASync.Model tests", function() {
             var obj = _.extend({}, Backbone.Events);
             var beforeCallback = sinon.spy();
             var afterCallback = sinon.spy();
+            var errorCallback = sinon.spy();
+            var completeCallback = sinon.spy();
             var note = new FIXTURES.Note(value);
             obj.listenTo(note, 'before:save', beforeCallback);
             obj.listenTo(note, 'after:save', afterCallback);
 
-            note.save(value, {test: true, silent:false})
+            note.save(value, {
+                test: true,
+                silent:false,
+                error: errorCallback,
+                complete: completeCallback
+            })
             .then(function(data) {
             })
             .catch(function(data) {
                 expect(beforeCallback.called).to.be.true;
                 expect(afterCallback.called).to.be.true;
-                expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
+
+                expect(beforeCallback.calledBefore(errorCallback)).to.be.true;
+                expect(errorCallback.calledBefore(afterCallback)).to.be.true;
+                expect(afterCallback.calledBefore(completeCallback)).to.be.true;
 
                 var beforeModel = beforeCallback.args[0][0];
                 var attrs = beforeCallback.args[0][1];
@@ -651,6 +732,18 @@ describe("ASync.Model tests", function() {
                 var success = afterCallback.args[0][3];
                 expect(success).to.be.false;
                 
+                var errorModel = errorCallback.args[0][0];
+                expect(errorModel).to.deep.equal(note);
+                var errorResponse = errorCallback.args[0][1];
+                expect(errorResponse.status).to.equal(500);
+                var errorOptions = errorCallback.args[0][2];
+                expect(errorOptions.test).to.be.true;
+
+                var completeResponse = completeCallback.args[0][0];
+                expect(completeResponse.status).to.equal(500);
+                var completeStatus = completeCallback.args[0][1];
+                expect(completeStatus).to.equal('error');
+
                 done();
             });
 
@@ -800,15 +893,25 @@ describe("ASync.Model tests", function() {
             var obj = _.extend({}, Backbone.Events);
             var beforeCallback = sinon.spy();
             var afterCallback = sinon.spy();
+            var successCallback = sinon.spy();
+            var completeCallback = sinon.spy();
             var contact = new FIXTURES.Contact({id: 3});
             obj.listenTo(contact, 'before:destroy', beforeCallback);
             obj.listenTo(contact, 'after:destroy', afterCallback);
 
-            contact.destroy({test: true, silent:false})
+            contact.destroy({
+                test: true,
+                silent:false,
+                success: successCallback,
+                complete: completeCallback
+            })
             .then(function(data) {
                 expect(beforeCallback.called).to.be.true;
                 expect(afterCallback.called).to.be.true;
-                expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
+                
+                expect(beforeCallback.calledBefore(successCallback)).to.be.true;
+                expect(successCallback.calledBefore(afterCallback)).to.be.true;
+                expect(afterCallback.calledBefore(completeCallback)).to.be.true;
 
                 var beforeModel = beforeCallback.args[0][0];
                 var beforeOptions = beforeCallback.args[0][1];
@@ -834,7 +937,20 @@ describe("ASync.Model tests", function() {
 
                 var success = afterCallback.args[0][3];
                 expect(success).to.be.true;
+
+                var successModel = successCallback.args[0][0];
+                expect(successModel).to.deep.equal(contact);
+                var successResponse = successCallback.args[0][1];
+                expect(successResponse).to.be.undefined;
+                var successOptions = successCallback.args[0][2];
+                expect(successOptions.test).to.be.true;
+                expect(successOptions.silent).to.be.false;
                 
+                var completeResponse = completeCallback.args[0][0];
+                expect(completeResponse.status).to.equal(204);
+                var completeStatus = completeCallback.args[0][1];
+                expect(completeStatus).to.equal('nocontent');
+
                 done();
             })
             .catch(function(err) { done(err); });
@@ -953,17 +1069,27 @@ describe("ASync.Model tests", function() {
             var obj = _.extend({}, Backbone.Events);
             var beforeCallback = sinon.spy();
             var afterCallback = sinon.spy();
+            var errorCallback = sinon.spy();
+            var completeCallback = sinon.spy();
             var note = new FIXTURES.Note({id: 2});
             obj.listenTo(note, 'before:destroy', beforeCallback);
             obj.listenTo(note, 'after:destroy', afterCallback);
 
-            note.destroy({test: true, silent:false})
+            note.destroy({
+                test: true,
+                silent: false,
+                error: errorCallback,
+                complete: completeCallback
+            })
             .then(function(data) {
             })
             .catch(function(data) {
                 expect(beforeCallback.called).to.be.true;
                 expect(afterCallback.called).to.be.true;
-                expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
+
+                expect(beforeCallback.calledBefore(errorCallback)).to.be.true;
+                expect(errorCallback.calledBefore(afterCallback)).to.be.true;
+                expect(afterCallback.calledBefore(completeCallback)).to.be.true;
 
                 var beforeModel = beforeCallback.args[0][0];
                 var beforeOptions = beforeCallback.args[0][1];
@@ -997,8 +1123,22 @@ describe("ASync.Model tests", function() {
                 var success = afterCallback.args[0][3];
                 expect(success).to.be.false;
                 
+                var errorModel = errorCallback.args[0][0];
+                expect(errorModel).to.deep.equal(note);
+                var errorResponse = errorCallback.args[0][1];
+                expect(errorResponse.status).to.equal(500);
+                var errorOptions = errorCallback.args[0][2];
+                expect(errorOptions.test).to.be.true;
+                expect(errorOptions.silent).to.be.false;
+
+                var completeResponse = completeCallback.args[0][0]
+                expect(completeResponse.status).to.equal(500);
+                var completeStatus = completeCallback.args[0][1];
+                expect(completeStatus).to.equal('error');
+
                 done();
-            });
+            })
+            .catch(function(error) { done(error); });
 
             server.respond();
         });
