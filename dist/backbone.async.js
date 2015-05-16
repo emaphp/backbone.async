@@ -1,8 +1,8 @@
-/*
- * Backbone.Async v1.2.0
- * Copyright 2015 Emmanuel Antico
- * This library is distributed under the terms of the MIT license.
- */
+//
+// Backbone.Async v1.3.0
+// Copyright 2015 Emmanuel Antico
+// This library is distributed under the terms of the MIT license.
+//
 (function(global, factory) {
     if (typeof define === 'function' && define.amd) {
         define(['backbone', 'underscore'], function(Backbone, _) {
@@ -14,6 +14,11 @@
         factory(global, global.Backbone, global._);
     }
 }(this, function(global, Backbone, _) {
+    
+    //
+    // Helpers
+    // -------
+
     var overrideCallback = function(callback, resolver, cbOptions) {
         return function(model, response, options) {
             if (callback) {
@@ -25,11 +30,11 @@
                 options: options
             };
 
-            //populate data object correctly and invoke resolver
+            // Populate data object and invoke resolver
             data[cbOptions.collection && cbOptions.method != 'create' ? 'collection' : 'model'] = model;
             resolver(data);
 
-            //triggers an after:method event
+            // Triggers an after:method event
             if (!options.silent) {
                 model.trigger('after:' + cbOptions.method, model, response, options, cbOptions._success);
             }
@@ -74,7 +79,7 @@
                     options.error = overrideCallback(error, reject, _.extend({_success: false}, cbOptions));
 
                     if (cbOptions.collection) {
-                        //if not silent, trigger a before event
+                        // If not silent, trigger a before event
                         if (!options.silent) {
                             if (method === 'create') {
                                 model.trigger('before:create', model, attrs, options);
@@ -86,7 +91,7 @@
                         proto[method].apply(model, method === 'create' ? [attrs, options] : [options]);
                     }
                     else {
-                        //if not silent, trigger a before event
+                        // If not silent, trigger a before event
                         if (!options.silent) {
                             if (method === 'save') {
                                 model.trigger('before:save', model, attrs, options);
@@ -108,20 +113,122 @@
         return methods.reduce(wrapMethod(Base.prototype), {});
     };
 
-    //create namespace
-    var Async = Backbone.Async = Backbone.Async || {};
-    Async.Version = '1.2.0';
+    //
+    // Namespace
+    // ---------
 
-    //extend Model and Collection prototypes
+    var Async = Backbone.Async = Backbone.Async || {};
+    Async.VERSION = '1.3.0';
+    Async.extend = Backbone.Model.extend;
+
+    //
+    // Async.Model
+    // -----------
+
     Async.Model = Backbone.Model.extend(
         buildPrototype(Backbone.Model, ['fetch', 'save', 'destroy'])
     );
+
+    //
+    // Async.Collection
+    // ----------------
 
     Async.Collection = Backbone.Collection.extend(
         buildPrototype(Backbone.Collection, ['fetch', 'create'])
     );
 
-    //Storage class
+    _.extend(Async.Collection.prototype, {
+        update: function (model, options) {
+            var options = options || {};
+
+            if (!options.silent) {
+                this.trigger('before:update', model, options);
+            }
+
+            var self = this,
+                success = options.success,
+                error = options.error,
+                complete = options.complete;
+
+            _.extend(options, {
+                complete: function (model, response, options) {
+                    if (_.isFunction(complete)) {
+                        complete(model, response, options);
+                    }
+                },
+
+                success: function (model, response, options) {
+                    if (_.isFunction(success)) {
+                        success(model, response, options);
+                    }
+
+                    if (!options.silent) {
+                        self.trigger('after:update', model, response, options, true);
+                    }
+                },
+
+                error: function (model, response, options) {
+                    if (_.isFunction(error)) {
+                        error(model, response, options);
+                    }
+
+                    if (!options.silent) {
+                        self.trigger('after:update', model, response, options, false);
+                    }
+                }
+            });
+
+            return model.save(model.attributes, options);
+        },
+
+        delete: function (model, options) {
+            var options = options || {};
+
+            if (!options.silent) {
+                this.trigger('before:delete', model, this, options);
+            }
+
+            var self = this,
+                success = options.success,
+                error = options.error,
+                complete = options.complete;
+
+            _.extend(options, {
+                complete: function (response, status) {
+                    if (_.isFunction(complete)) {
+                        complete(response, status);
+                    }
+                },
+
+                success: function (model, response, options) {
+                    if (_.isFunction(success)) {
+                        success(model, response, options);
+                    }
+
+                    if (!options.silent) {
+                        self.trigger('after:delete', model, response, options, true);
+                    }
+                },
+
+                error: function (model, response, options) {
+                    if (_.isFunction(error)) {
+                        error(model, response, options);
+                    }
+
+                    if (!options.silent) {
+                        self.trigger('after:delete', model, response, options, false);
+                    }
+                }
+            });
+
+            return model.destroy(options);
+        }
+    });
+
+    //
+    // Async.Storage
+    // -------------
+
     var Storage = Async.Storage = function(options) {
         if (options) {
             if (options.Collection) {
@@ -139,11 +246,11 @@
         this.initialize.apply(this, arguments);
     };
 
-    //include Backbone.Events in Storage class prototype
+    // Include Backbone.Events in Storage class prototype
     _.extend(Storage.prototype, Backbone.Events, {
         initialize: function(){},
 
-        //fetchs a collection
+        // Fetchs a collection
         fetchAll: function(options) {
             if (this.loaded) {
                 return Promise.resolve({
@@ -185,7 +292,7 @@
             });
         },
 
-        //fetchs a model
+        // Fetchs a model
         fetch: function(id, options) {
             if (this.collection) {
                 var stored = this.collection.get(id);
@@ -242,7 +349,7 @@
             });
         },
 
-        //stores a model
+        // Stores a model
         store: function(model) {
             this._initCollection();
             this.collection.push(model);
@@ -253,13 +360,13 @@
             });
         },
 
-        //obtains a model by id
+        // Obtains a model by id
         get: function(id) {
             this._initCollection();
             return this.collection.get(id);
         },
 
-        //wrapper for Collection.create
+        // Wrapper for Async.Collection.create
         create: function(attributes, options) {
             if (!this.Model) {
                 throw new Error('No Model class defined');
@@ -301,7 +408,7 @@
             });
         },
 
-        //initializes a collection instance
+        // Initializes the internal collection instance
         _initCollection: function() {
             if (!this.Collection) {
                 throw new Error('No Collection class defined');
@@ -313,7 +420,7 @@
         }
     });
 
-    //make Storage class extendable
+    // Make Storage class extendable
     Storage.extend = Backbone.Model.extend;
 
     return Async;
