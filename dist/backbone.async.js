@@ -137,6 +137,53 @@
         buildPrototype(Backbone.Collection, ['fetch', 'create'])
     );
 
+    var overrideOptionsCallbacks = function (instance, event, options) {
+        var afterArguments,
+            success = options.success,
+            error = options.error,
+            complete = options.complete;
+
+        return {
+            success: function (model, response, options) {
+                if (_.isFunction(success)) {
+                    success(model, response, options);
+                }
+
+                afterArguments = {
+                    model: model,
+                    response: response,
+                    options: options
+                };
+            },
+
+            error: function (model, response, options) {
+                if (_.isFunction(error)) {
+                    error(model, response, options);
+                }
+
+                afterArguments = {
+                    model: model,
+                    response: response,
+                    options: options
+                };
+            },
+
+            complete: function (response, status) {
+                if (!afterArguments.options.silent) {
+                    instance.trigger('after:' + event,
+                        afterArguments.model,
+                        afterArguments.response,
+                        afterArguments.options
+                    );
+                }
+
+                if (_.isFunction(complete)) {
+                    complete(response, status);
+                }
+            }
+        };
+    };
+
     _.extend(Async.Collection.prototype, {
         update: function (model, options) {
             var options = options || {};
@@ -144,39 +191,8 @@
             if (!options.silent) {
                 this.trigger('before:update', model, options);
             }
-
-            var self = this,
-                success = options.success,
-                error = options.error,
-                complete = options.complete;
-
-            _.extend(options, {
-                complete: function (model, response, options) {
-                    if (_.isFunction(complete)) {
-                        complete(model, response, options);
-                    }
-                },
-
-                success: function (model, response, options) {
-                    if (_.isFunction(success)) {
-                        success(model, response, options);
-                    }
-
-                    if (!options.silent) {
-                        self.trigger('after:update', model, response, options, true);
-                    }
-                },
-
-                error: function (model, response, options) {
-                    if (_.isFunction(error)) {
-                        error(model, response, options);
-                    }
-
-                    if (!options.silent) {
-                        self.trigger('after:update', model, response, options, false);
-                    }
-                }
-            });
+            
+            _.extend(options, overrideOptionsCallbacks(this, 'update', options));
 
             return model.save(model.attributes, options);
         },
@@ -188,38 +204,7 @@
                 this.trigger('before:delete', model, this, options);
             }
 
-            var self = this,
-                success = options.success,
-                error = options.error,
-                complete = options.complete;
-
-            _.extend(options, {
-                complete: function (response, status) {
-                    if (_.isFunction(complete)) {
-                        complete(response, status);
-                    }
-                },
-
-                success: function (model, response, options) {
-                    if (_.isFunction(success)) {
-                        success(model, response, options);
-                    }
-
-                    if (!options.silent) {
-                        self.trigger('after:delete', model, response, options, true);
-                    }
-                },
-
-                error: function (model, response, options) {
-                    if (_.isFunction(error)) {
-                        error(model, response, options);
-                    }
-
-                    if (!options.silent) {
-                        self.trigger('after:delete', model, response, options, false);
-                    }
-                }
-            });
+            _.extend(options, overrideOptionsCallbacks(this, 'delete', options));
 
             return model.destroy(options);
         }

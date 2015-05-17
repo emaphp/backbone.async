@@ -152,10 +152,9 @@ describe("ASync.Collection tests", function() {
             .then(function(data) {
                 expect(beforeCallback.called).to.be.true;
                 expect(afterCallback.called).to.be.true;
-                expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
-
                 expect(successCallback.called).to.be.true;
                 expect(completeCallback.called).to.be.true;
+
                 expect(beforeCallback.calledBefore(successCallback)).to.be.true;
                 expect(successCallback.calledBefore(afterCallback)).to.be.true;
                 expect(afterCallback.calledBefore(completeCallback)).to.be.true;
@@ -817,11 +816,15 @@ describe("ASync.Collection tests", function() {
             var afterCallback = sinon.spy();
             var successCallback = sinon.spy();
             var completeCallback = sinon.spy();
+            var beforeSaveCallback = sinon.spy();
+            var afterSaveCallback = sinon.spy();
 
             contacts.on('before:update', beforeCallback);
             contacts.on('after:update', afterCallback);
 
             var contact = new FIXTURES.Contact(value);
+            contact.on('before:save', beforeSaveCallback);
+            contact.on('after:save', afterSaveCallback);
 
             contacts.update(contact, {
                 test: true,
@@ -834,9 +837,13 @@ describe("ASync.Collection tests", function() {
                 expect(afterCallback.called).to.be.true;
                 expect(successCallback.called).to.be.true;
                 expect(completeCallback.called).to.be.true;
+                expect(beforeSaveCallback.called).to.be.true;
+                expect(afterSaveCallback.called).to.be.true;
 
-                expect(beforeCallback.calledBefore(successCallback)).to.be.true;
-                expect(successCallback.calledBefore(afterCallback)).to.be.true;
+                expect(beforeCallback.calledBefore(beforeSaveCallback)).to.be.true;
+                expect(beforeSaveCallback.calledBefore(successCallback)).to.be.true;
+                expect(successCallback.calledBefore(afterSaveCallback)).to.be.true;
+                expect(afterSaveCallback.calledBefore(afterCallback)).to.be.true;
                 expect(afterCallback.calledBefore(completeCallback)).to.be.true;
 
                 var beforeModel = beforeCallback.args[0][0];
@@ -867,11 +874,61 @@ describe("ASync.Collection tests", function() {
                 expect(completeResponse.status).to.equal(200);
                 var completeStatus = completeCallback.args[0][1];
                 expect(completeStatus).to.equal('success');
-            
+
+                var beforeSaveModel = beforeSaveCallback.args[0][0];
+                expect(beforeSaveModel).to.deep.equal(contact);
+                var beforeSaveResponse = beforeSaveCallback.args[0][1];
+                expect(beforeSaveResponse).to.deep.equal(value);
+                var beforeSaveOptions = beforeSaveCallback.args[0][2];
+                expect(beforeSaveOptions.test).to.be.true;
+                expect(beforeSaveOptions.silent).to.be.false;
+
+                var afterSaveModel = afterSaveCallback.args[0][0];
+                expect(afterSaveModel).to.deep.equal(contact);
+                var afterSaveResponse = afterSaveCallback.args[0][1];
+                expect(afterSaveResponse).to.deep.equal(value);
+                var afterSaveOptions = afterSaveCallback.args[0][2];
+                expect(afterSaveOptions.test).to.be.true;
+                expect(afterSaveOptions.silent).to.be.false;
+                var afterSaveStatus = afterSaveCallback.args[0][3];
+                expect(afterSaveStatus).to.be.true;
+
+                done();
+            })
+            .catch(function(err) {console.log(err); done(err);});
+
+
+            server.respond();
+        });
+
+        it('must not call event handlers', function (done) {
+            var value = {id: 1, name: 'emaphp', email: 'emaphp@github.com'};
+
+            server.respondWith(
+                'PUT',
+                '/contacts/1',
+                [
+                    200,
+                    {"Content-Type": "application/json"},
+                    JSON.stringify(value)
+                ]
+            );
+
+            var contacts = new FIXTURES.Contacts();
+
+            var beforeCallback = sinon.spy();
+            var afterCallback = sinon.spy();
+
+            var contact = new FIXTURES.Contact(value);
+
+            contacts.update(contact, {
+                test: false,
+                silent: true
+            })
+            .then(function (data) {
                 done();
             })
             .catch(function(err) {done(err);});
-
 
             server.respond();
         });
