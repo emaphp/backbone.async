@@ -918,14 +918,26 @@ describe("ASync.Collection tests", function() {
 
             var beforeCallback = sinon.spy();
             var afterCallback = sinon.spy();
+            var beforeSaveCallback = sinon.spy();
+            var afterSaveCallback = sinon.spy();
+
+            contacts.on('before:update', beforeCallback);
+            contacts.on('after:update', afterCallback);
 
             var contact = new FIXTURES.Contact(value);
+            contact.on('before:save', beforeSaveCallback);
+            contact.on('after:save', afterSaveCallback);
 
             contacts.update(contact, {
                 test: false,
                 silent: true
             })
             .then(function (data) {
+                expect(beforeCallback.called).to.be.false;
+                expect(afterCallback.called).to.be.false;
+                expect(beforeSaveCallback.called).to.be.false;
+                expect(afterSaveCallback.called).to.be.false;
+
                 done();
             })
             .catch(function(err) {done(err);});
@@ -934,8 +946,192 @@ describe("ASync.Collection tests", function() {
         });
     });
 
-    describe('Update fail tests', function () {
+    describe('Update fail tests', function (done) {
+        it('must call catch', function () {
+            var value = {message: 'Hello World'};
 
+            server.respondWith(
+                'PUT',
+                'notes/1',
+                [
+                    500,
+                    null,
+                    ''
+                ]
+            );
+
+            var notes = new FIXTURES.Notes();
+            var note = new FIXTURES.Note(value);
+
+            notes.update(note, {
+                test: true,
+                silent: false
+            })
+            .then(function(){})
+            .catch(function(data) {
+                expect(data).to.be.a('object');
+                expect(data).to.have.property('model');
+                expect(data).to.have.property('response');
+                expect(data).to.have.property('options');
+
+                expect(data.model).to.deep.equal(note);
+                expect(data.response.status).to.equal(500);
+                expect(data.options.test).to.be.true;
+                expect(data.options.silent).to.be.false;
+
+                done();
+            })
+            .catch(function(err){ done(err) });
+
+            server.respond();
+        });
+
+        it('must call event handlers', function () {
+            var value = {message: 'Hello World'};
+
+            server.respondWith(
+                'PUT',
+                'notes/1',
+                [
+                    500,
+                    null,
+                    ''
+                ]
+            );
+
+            var notes = new FIXTURES.Notes();
+
+            var beforeCallback = sinon.spy();
+            var afterCallback = sinon.spy();
+            var errorCallback = sinon.spy();
+            var completeCallback = sinon.spy();
+            var beforeSaveCallback = sinon.spy();
+            var afterSaveCallback = sinon.spy();
+
+            notes.on('before:update', beforeCallback);
+            notes.on('after:update', afterCallback);
+
+            var note = new FIXTURES.Note(value);
+            note.on('before:save', beforeSaveCallback);
+            note.on('after:save', afterSaveCallback);
+
+            notes.update(note, {
+                test: true,
+                silent: false,
+                error: errorCallback,
+                complete: completeCallback
+            })
+            .then(function() {})
+            .catch (function() {
+                expect(beforeCallback.called).to.be.true;
+                expect(afterCallback.called).to.be.true;
+                expect(successCallback.called).to.be.true;
+                expect(completeCallback.called).to.be.true;
+                expect(beforeSaveCallback.called).to.be.true;
+                expect(beforeSaveCallback.called).to.be.true;
+
+                expect(beforeCallback.calledBefore(beforeSaveCallback)).to.be.true;
+                expect(beforeSaveCallback.calledBefore(errorCallback)).to.be.true;
+                expect(errorCallback.calledBefore(afterSaveCallback)).to.be.true;
+                expect(afterSaveCallback.calledBefore(afterCallback)).to.be.true;
+                expect(afterCallback.calledBefore(completeCallback)).to.be.true;
+
+                var beforeModel = beforeCallback.args[0][0];
+                expect(beforeModel.attributes).to.deep.equal(value);
+                var beforeOptions = beforeCallback.args[0][1];
+                expect(beforeOptions.test).to.be.true;
+                expect(beforeOptions.silent).to.be.false;
+
+                var afterModel = afterCallback.args[0][0];
+                expect(afterModel.attributes).to.deep.equal(value);
+                var afterResponse = afterCallback.args[0][1];
+                expect(afterResponse).to.deep.equal(value);
+                var afterOptions = afterCallback.args[0][2];
+                expect(afterOptions.test).to.be.true;
+                expect(afterOptions.silent).to.be.false;
+
+                var errorModel = errorCallback.args[0][0];
+                expect(errorModel.attributes).to.deep.equal(value);
+                var errorResponse = errorCallback.args[0][1];
+                expect(errorResponse.status).to.equal(500);
+                var errorOptions = errorCallback.args[0][2];
+                expect(errorOptions.test).to.be.true;
+                expect(errorOptions.silent).to.be.false;
+
+                var completeResponse = completeCallback.args[0][0];
+                expect(completeResponse.status).to.equal(200);
+                var completeStatus = completeCallback.args[0][1];
+                expect(completeStatus).to.equal('error');
+
+                var beforeSaveModel = beforeSaveCallback.args[0][0];
+                expect(beforeSaveModel).to.deep.equal(contact);
+                var beforeSaveResponse = beforeSaveCallback.args[0][1];
+                expect(beforeSaveResponse).to.deep.equal(value);
+                var beforeSaveOptions = beforeSaveCallback.args[0][2];
+                expect(beforeSaveOptions.test).to.be.true;
+                expect(beforeSaveOptions.silent).to.be.false;
+
+                var afterSaveModel = afterSaveCallback.args[0][0];
+                expect(afterSaveModel).to.deep.equal(contact);
+                var afterSaveResponse = afterSaveCallback.args[0][1];
+                expect(afterSaveResponse).to.deep.equal(value);
+                var afterSaveOptions = afterSaveCallback.args[0][2];
+                expect(afterSaveOptions.test).to.be.true;
+                expect(afterSaveOptions.silent).to.be.false;
+                var afterSaveStatus = afterSaveCallback.args[0][3];
+                expect(afterSaveStatus).to.be.true;
+
+                done();
+            })
+            .catch (function(error) { done(err); } );
+
+            server.respond();
+        });
+
+        it('must not call event handlers', function () {
+            var value = {message: 'Hello World'};
+
+            server.respondWith(
+                'PUT',
+                'notes/1',
+                [
+                    500,
+                    null,
+                    ''
+                ]
+            );
+
+            var notes = new FIXTURES.Notes();
+
+            var beforeCallback = sinon.spy();
+            var afterCallback = sinon.spy();
+            var beforeSaveCallback = sinon.spy();
+            var afterSaveCallback = sinon.spy();
+
+            notes.on('before:update', beforeCallback);
+            notes.on('after:update', afterCallback);
+
+            var note = new FIXTURES.Note(value);
+            note.on('before:save', beforeSaveCallback);
+            note.on('after:save', afterSaveCallback);
+
+            notes.update(note, {
+                test: false,
+                silent: true
+            })
+            .then(function(){})
+            .catch(function() {
+                expect(beforeCallback.called).to.be.false;
+                expect(afterCallback.called).to.be.false;
+                expect(beforeSaveCallback.called).to.be.false;
+                expect(afterSaveCallback.called).to.be.false;
+
+                done();
+            })
+            .catch(function(error){done(error)});
+
+            server.respond();
+        });
     });
 
     describe('Delete tests', function () {
