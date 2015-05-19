@@ -134,7 +134,7 @@
     // ----------------
 
     Async.Collection = Backbone.Collection.extend(
-        buildPrototype(Backbone.Collection, ['fetch', 'create'])
+        buildPrototype(Backbone.Collection, ['fetch'])
     );
 
     var overrideOptionsCallbacks = function (instance, event, options) {
@@ -185,6 +185,51 @@
     };
 
     _.extend(Async.Collection.prototype, {
+        create: function(model, options) {
+            options = options ? _.clone(options) : {};
+
+            if (!options.silent) {
+                this.trigger('before:create', this, model, options);
+            }
+            
+            if (!(model = this._prepareModel(model, options))) {
+                return false;
+            }
+
+            if (!options.wait) {
+                this.add(model, options);
+            }
+
+            var collection = this;
+            var success = options.success;
+            var error = options.error;
+            options.success = function(model, resp) {
+                if (options.wait) {
+                    collection.add(model, options);
+                }
+
+                if (success) {
+                    success(model, resp, options);
+                }
+
+                if (!options.silent) {
+                    collection.trigger('after:create', model, resp, options, true);
+                }
+            };
+
+            options.error = function (model, resp) {
+                if (error) {
+                    error(model, resp, options);
+                }
+
+                if (!options.silent) {
+                    collection.trigger('after:create', model, resp, options, false);
+                }
+            };
+
+            return model.save(null, options);
+        },
+
         update: function (model, options) {
             var options = options || {};
 
