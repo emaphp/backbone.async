@@ -31,7 +31,7 @@
             };
 
             // Populate data object and invoke resolver
-            data[cbOptions.collection && cbOptions.method != 'create' ? 'collection' : 'model'] = model;
+            data[cbOptions.collection ? 'collection' : 'model'] = model;
             resolver(data);
 
             // Triggers an after:method event
@@ -44,7 +44,7 @@
     var parseArgs = function(method, key, value, _options) {
         var attrs, options;
 
-        if (method === 'save' || method === 'create') {
+        if (method === 'save') {
             if (key === null || typeof key === 'object') {
                 attrs = key;
                 options = value;
@@ -81,14 +81,10 @@
                     if (cbOptions.collection) {
                         // If not silent, trigger a before event
                         if (!options.silent) {
-                            if (method === 'create') {
-                                model.trigger('before:create', model, attrs, options);
-                            } else {
-                                model.trigger('before:' + method, model, options);
-                            }
+                            model.trigger('before:' + method, model, options);
                         }
 
-                        proto[method].apply(model, method === 'create' ? [attrs, options] : [options]);
+                        proto[method].call(model, options);
                     }
                     else {
                         // If not silent, trigger a before event
@@ -137,53 +133,6 @@
         buildPrototype(Backbone.Collection, ['fetch'])
     );
 
-    var overrideOptionsCallbacks = function (instance, event, options) {
-        var afterArguments,
-            success = options.success,
-            error = options.error,
-            complete = options.complete;
-
-        return {
-            success: function (model, response, options) {
-                if (_.isFunction(success)) {
-                    success(model, response, options);
-                }
-
-                afterArguments = {
-                    model: model,
-                    response: response,
-                    options: options
-                };
-            },
-
-            error: function (model, response, options) {
-                if (_.isFunction(error)) {
-                    error(model, response, options);
-                }
-
-                afterArguments = {
-                    model: model,
-                    response: response,
-                    options: options
-                };
-            },
-
-            complete: function (response, status) {
-                if (!afterArguments.options.silent) {
-                    instance.trigger('after:' + event,
-                        afterArguments.model,
-                        afterArguments.response,
-                        afterArguments.options
-                    );
-                }
-
-                if (_.isFunction(complete)) {
-                    complete(response, status);
-                }
-            }
-        };
-    };
-
     _.extend(Async.Collection.prototype, {
         create: function(model, options) {
             options = options ? _.clone(options) : {};
@@ -231,25 +180,93 @@
         },
 
         update: function (model, options) {
-            var options = options || {};
+            options = options ? _.clone(options) : {};
 
             if (!options.silent) {
                 this.trigger('before:update', model, options);
             }
-            
-            _.extend(options, overrideOptionsCallbacks(this, 'update', options));
 
-            return model.save(model.attributes, options);
+            if (!options.wait) {
+                this.add(model, _.extend({merge: true}, options));
+            }
+            
+            var self = this;
+            var error = options.error;
+            var success = options.success;
+            var complete = options.complete;
+            var afterArguments = ['after:update'];
+
+            options.success = function (model, response, options) {
+                if (_.isFunction(success)) {
+                    success(model, response, options);
+                }
+
+                afterArguments = afterArguments.concat(_.toArray(arguments), [true]);
+            };
+
+            options.error = function (model, response, options) {
+                if (_.isFunction(error)) {
+                    error(model, response, options);
+                }
+
+                afterArguments = afterArguments.concat(_.toArray(arguments), [false]);
+            };
+
+            options.complete = function (response, status) {
+                var options = afterArguments[3];
+
+                if (!options.silent) {
+                    self.trigger.apply(self, afterArguments);
+                }
+
+                if (_.isFunction(complete)) {
+                    complete(response, status);
+                }
+            };
+
+            return model.save(null, options);
         },
 
         delete: function (model, options) {
-            var options = options || {};
+            options = options ? _.clone(options) : {};
 
             if (!options.silent) {
-                this.trigger('before:delete', model, this, options);
+                this.trigger('before:delete', model, options);
             }
 
-            _.extend(options, overrideOptionsCallbacks(this, 'delete', options));
+            var self = this;
+            var error = options.error;
+            var success = options.success;
+            var complete = options.complete;
+            var afterArguments = ['after:delete'];
+            
+            options.success = function (model, response, options) {
+                if (_.isFunction(success)) {
+                    success(model, response, options);
+                }
+
+                afterArguments = afterArguments.concat(_.toArray(arguments), [true]);
+            };
+
+            options.error = function (model, response, options) {
+                if (_.isFunction(error)) {
+                    error(model, response, options);
+                }
+
+                afterArguments = afterArguments.concat(_.toArray(arguments), [false]);
+            };
+
+            options.complete = function (response, status) {
+                var options = afterArguments[3];
+
+                if (!options.silent) {
+                    self.trigger.apply(self, afterArguments);
+                }
+
+                if (_.isFunction(complete)) {
+                    complete(response, status);    
+                }
+            };
 
             return model.destroy(options);
         }
