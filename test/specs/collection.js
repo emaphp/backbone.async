@@ -1316,6 +1316,197 @@ describe("ASync.Collection tests", function() {
     });
 
     describe('Delete fail tests', function () {
+        it('must call catch', function (done) {
+            var value = {id: 1, message: 'Hello World'};
 
+            server.respondWith(
+                'DELETE',
+                '/notes/1',
+                [
+                    500,
+                    null,
+                    ''
+                ]
+            );
+
+            var notes = new FIXTURES.Notes();
+            var note = new FIXTURES.Note(value);
+            notes.add(note);
+
+            notes.delete(note, {
+                test: true,
+                silent: false
+            })
+            .then(function () {})
+            .catch(function (data) {
+                expect(data).to.be.a('object');
+                expect(data).to.have.property('model');
+                expect(data).to.have.property('response');
+                expect(data).to.have.property('options');
+                
+                expect(data.model).to.deep.equal(note);
+                expect(data.response.status).to.equal(500);
+                expect(data.options.test).to.be.true;
+                expect(data.options.silent).to.be.false;
+
+                done();
+            })
+            .catch(function(error) { done(error); });
+
+            server.respond();
+        });
+
+        it('must call event handlers', function (done) {
+            var value = {id: 1, message: 'Hello World'};
+
+            server.respondWith(
+                'DELETE',
+                '/notes/1',
+                [
+                    500,
+                    null,
+                    ''
+                ]
+            );
+
+            var notes = new FIXTURES.Notes();
+            var note = new FIXTURES.Note(value);
+            notes.add(note);
+
+            var beforeCallback = sinon.spy();
+            var afterCallback = sinon.spy();
+            var errorCallback = sinon.spy();
+            var completeCallback = sinon.spy();
+            var beforeDestroyCallback = sinon.spy();
+            var afterDestroyCallback = sinon.spy();
+
+            notes.on('before:delete', beforeCallback);
+            notes.on('after:delete', afterCallback);
+            note.on('before:destroy', beforeDestroyCallback);
+            note.on('after:destroy', afterDestroyCallback);
+
+            notes.delete(note, {
+                test: true,
+                silent: false,
+                error: errorCallback,
+                complete: completeCallback
+            })
+            .then(function(){})
+            .catch(function() {
+                expect(beforeCallback.called).to.be.true;
+                expect(afterCallback.called).to.be.true;
+                expect(errorCallback.called).to.be.true;
+                expect(completeCallback.called).to.be.true;
+                expect(beforeDestroyCallback.called).to.be.true;
+                expect(afterDestroyCallback.called).to.be.true;
+
+                expect(beforeCallback.calledBefore(beforeDestroyCallback)).to.be.true;
+                expect(beforeDestroyCallback.calledBefore(errorCallback)).to.be.true;
+                expect(errorCallback.calledBefore(afterDestroyCallback)).to.be.true;
+                expect(afterDestroyCallback.calledBefore(afterCallback)).to.be.true;
+                expect(afterCallback.calledBefore(completeCallback)).to.be.true;
+
+                var beforeModel = beforeCallback.args[0][0];
+                expect(beforeModel).to.deep.equal(note);
+                var beforeOptions = beforeCallback.args[0][1];
+                expect(beforeOptions.test).to.be.true;
+                expect(beforeOptions.silent).to.be.false;
+
+                var afterModel = afterCallback.args[0][0];
+                expect(afterModel).to.deep.equal(note);
+                var afterResponse = afterCallback.args[0][1];
+                expect(afterResponse.status).to.equal(500);
+                var afterOptions = afterCallback.args[0][2];
+                expect(afterOptions.test).to.be.true;
+                expect(afterOptions.silent).to.be.false;
+                var afterStatus = afterCallback.args[0][3];
+                expect(afterStatus).to.be.false;
+
+                var errorModel = errorCallback.args[0][0];
+                expect(errorModel).to.deep.equal(note);
+                var errorResponse = errorCallback.args[0][1];
+                expect(errorResponse.status).to.equal(500);
+                var errorOptions = errorCallback.args[0][2];
+                expect(errorOptions.test).to.be.true;
+                expect(errorOptions.silent).to.be.false;
+
+                var completeResponse = completeCallback.args[0][0];
+                expect(completeResponse.status).to.equal(500);
+                var completeStatus = completeCallback.args[0][1];
+                expect(completeStatus).to.equal('error');
+
+                var beforeDestroyModel = beforeDestroyCallback.args[0][0];
+                expect(beforeDestroyModel).to.deep.equal(note);
+                var beforeDestroyOptions = beforeDestroyCallback.args[0][1];
+                expect(beforeDestroyOptions.test).to.be.true;
+                expect(beforeDestroyOptions.silent).to.be.false;
+
+                var afterDestroyModel = afterDestroyCallback.args[0][0];
+                expect(afterDestroyModel).to.deep.equal(note);
+                var afterDestroyResponse = afterDestroyCallback.args[0][1];
+                expect(afterDestroyResponse.status).to.equal(500);
+                var afterDestroyOptions = afterDestroyCallback.args[0][2];
+                expect(afterDestroyOptions.test).to.be.true;
+                expect(afterDestroyOptions.silent).to.be.false;
+                var afterDestroyStatus = afterDestroyCallback.args[0][3];
+                expect(afterDestroyStatus).to.be.false;
+
+                done();
+            })
+            .catch(function(error){done(error);});
+
+            server.respond();
+        });
+
+        it('must not call event handlers', function (done) {
+            var value = {id: 1, message: 'Hello World'};
+
+            server.respondWith(
+                'DELETE',
+                '/notes/1',
+                [
+                    500,
+                    null,
+                    ''
+                ]
+            );
+
+            var notes = new FIXTURES.Notes();
+            var note = new FIXTURES.Note(value);
+            notes.add(note);
+
+            var beforeCallback = sinon.spy();
+            var afterCallback = sinon.spy();
+            var beforeDestroyCallback = sinon.spy();
+            var afterDestroyCallback = sinon.spy();
+            var errorCallback = sinon.spy();
+            var completeCallback = sinon.spy();
+
+            notes.on('before:delete', beforeCallback);
+            notes.on('after:delete', afterCallback);
+            note.on('before:destroy', beforeDestroyCallback);
+            note.on('after:destroy', afterDestroyCallback);
+
+            notes.delete(note, {
+                test: false,
+                silent: true,
+                error: errorCallback,
+                complete: completeCallback
+            })
+            .then(function(){})
+            .catch(function() {
+                expect(beforeCallback.called).to.be.false;
+                expect(afterCallback.called).to.be.false;
+                expect(errorCallback.called).to.be.true;
+                expect(completeCallback.called).to.be.true;
+                expect(beforeDestroyCallback.called).to.be.false;
+                expect(afterDestroyCallback.called).to.be.false;
+
+                done();
+            })
+            .catch(function(error){done(error);});
+
+            server.respond();
+        });
     });
 });
