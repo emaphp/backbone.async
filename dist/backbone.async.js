@@ -19,7 +19,7 @@
     // Helpers
     // -------
 
-    var overrideCallback = function(callback, resolver, cbOptions) {
+    var overrideCallback = function(callback, resolver, callbackOpts) {
         return function(model, response, options) {
             if (callback) {
                 callback.apply(model, arguments);
@@ -31,12 +31,12 @@
             };
 
             // Populate data object and invoke resolver
-            data[cbOptions.collection ? 'collection' : 'model'] = model;
+            data[callbackOpts.collection ? 'collection' : 'model'] = model;
             resolver(data);
 
             // Triggers an after:method event
             if (!options.silent) {
-                model.trigger('after:' + cbOptions.method, model, response, options, cbOptions._success);
+                model.trigger('after:' + callbackOpts.method, model, response, options, callbackOpts.success);
             }
         };
     };
@@ -63,22 +63,26 @@
     var wrapMethod = function(proto) {
         return function(agg, method) {
             agg[method] = function(key, value, _options) {
-                var model = this,
-                    parsed = parseArgs(method, key, value, _options),
-                    options = parsed.options,
-                    attrs = parsed.attrs,
-                    success = options.success,
-                    error = options.error,
-                    cbOptions = {
+                var model = this;
+                var parsed = parseArgs(method, key, value, _options);
+                var options = parsed.options;
+                var attrs = parsed.attrs;
+                var success = options.success;
+                var error = options.error;
+                
+                var buildOptions = function (success) {
+                    return {
                         method: method,
-                        collection: proto === Backbone.Collection.prototype
+                        collection: proto === Backbone.Collection.prototype,
+                        success: success
                     };
+                };
 
                 return new Promise(function(resolve, reject) {
-                    options.success = overrideCallback(success, resolve, _.extend({_success: true}, cbOptions));
-                    options.error = overrideCallback(error, reject, _.extend({_success: false}, cbOptions));
+                    options.success = overrideCallback(success, resolve, buildOptions(true));
+                    options.error = overrideCallback(error, reject, buildOptions(false));
 
-                    if (cbOptions.collection) {
+                    if (proto === Backbone.Collection.prototype) {
                         // If not silent, trigger a before event
                         if (!options.silent) {
                             model.trigger('before:' + method, model, options);
@@ -105,8 +109,8 @@
         };
     };
 
-    var buildPrototype = function(Base, methods) {
-        return methods.reduce(wrapMethod(Base.prototype), {});
+    var buildPrototype = function(proto, methods) {
+        return methods.reduce(wrapMethod(proto), {});
     };
 
     //
@@ -122,7 +126,7 @@
     // -----------
 
     Async.Model = Backbone.Model.extend(
-        buildPrototype(Backbone.Model, ['fetch', 'save', 'destroy'])
+        buildPrototype(Backbone.Model.prototype, ['fetch', 'save', 'destroy'])
     );
 
     //
@@ -130,7 +134,7 @@
     // ----------------
 
     Async.Collection = Backbone.Collection.extend(
-        buildPrototype(Backbone.Collection, ['fetch'])
+        buildPrototype(Backbone.Collection.prototype, ['fetch'])
     );
 
     _.extend(Async.Collection.prototype, {
@@ -152,27 +156,28 @@
             var collection = this;
             var success = options.success;
             var error = options.error;
-            options.success = function(model, resp) {
+
+            options.success = function(model, response) {
                 if (options.wait) {
                     collection.add(model, options);
                 }
 
                 if (success) {
-                    success(model, resp, options);
+                    success(model, response, options);
                 }
 
                 if (!options.silent) {
-                    collection.trigger('after:create', model, resp, options, true);
+                    collection.trigger('after:create', model, response, options, true);
                 }
             };
 
-            options.error = function (model, resp) {
+            options.error = function (model, response) {
                 if (error) {
-                    error(model, resp, options);
+                    error(model, response, options);
                 }
 
                 if (!options.silent) {
-                    collection.trigger('after:create', model, resp, options, false);
+                    collection.trigger('after:create', model, response, options, false);
                 }
             };
 
@@ -186,18 +191,16 @@
                 this.trigger('before:update', model, options);
             }
 
-            if (!options.wait) {
-                this.add(model, _.extend({merge: true}, options));
-            }
-            
-            var self = this;
+            var collection = this;
             var error = options.error;
             var success = options.success;
             var complete = options.complete;
             var afterArguments = ['after:update'];
 
             options.success = function (model, response, options) {
-                if (_.isFunction(success)) {
+                collection.add(model, _.extend({merge: true}, options));
+
+                if (success) {
                     success(model, response, options);
                 }
 
@@ -205,7 +208,7 @@
             };
 
             options.error = function (model, response, options) {
-                if (_.isFunction(error)) {
+                if (error) {
                     error(model, response, options);
                 }
 
@@ -216,10 +219,10 @@
                 var options = afterArguments[3];
 
                 if (!options.silent) {
-                    self.trigger.apply(self, afterArguments);
+                    collection.trigger.apply(collection, afterArguments);
                 }
 
-                if (_.isFunction(complete)) {
+                if (complete) {
                     complete(response, status);
                 }
             };
@@ -234,14 +237,14 @@
                 this.trigger('before:delete', model, options);
             }
 
-            var self = this;
+            var collection = this;
             var error = options.error;
             var success = options.success;
             var complete = options.complete;
             var afterArguments = ['after:delete'];
             
             options.success = function (model, response, options) {
-                if (_.isFunction(success)) {
+                if (success) {
                     success(model, response, options);
                 }
 
@@ -249,7 +252,7 @@
             };
 
             options.error = function (model, response, options) {
-                if (_.isFunction(error)) {
+                if (error) {
                     error(model, response, options);
                 }
 
@@ -260,10 +263,10 @@
                 var options = afterArguments[3];
 
                 if (!options.silent) {
-                    self.trigger.apply(self, afterArguments);
+                    collection.trigger.apply(collection, afterArguments);
                 }
 
-                if (_.isFunction(complete)) {
+                if (complete) {
                     complete(response, status);    
                 }
             };
