@@ -1,5 +1,5 @@
 # Backbone.Async
-Backbone Models meet Promises
+Backbone meets Promises
 
 <br/>
 ###About
@@ -31,13 +31,109 @@ Backbone Models meet Promises
 ###Polyfill
 
 <br/>
-Browsers not supporting Promises should use a polyfill. This library uses [promise-polyfill](https://github.com/taylorhakes/promise-polyfill "") for testing.
+Browsers not supporting Promises should use a polyfill. This library uses [promise-polyfill](https://github.com/taylorhakes/promise-polyfill "") along with *PhantomJS* for testing.
 
 <br/>
-###Usage
+###Backbone.Async.Model
 
 <br/>
-**Backbone.Async.Collection**
+When invoking the methods *fetch*, *save* or *destroy* a new *Promise* instance is returned. Resolve and rejection callbacks receive a single argument containing the following properties:
+
+ * model: The model instance that invokes the synchronization method.
+ * response: On success, a JSON object with the values received. On error, an XHR instance.
+ * options: Options used for this request.
+
+<br/>
+**Fetching a model**
+
+```javascript
+var Contact = Backbone.Async.Model.extend({
+    urlRoot: '/contacts'
+});
+
+var contact = new Contact({id: 1});
+
+// Fetch by id
+contact.fetch()
+.then(function(data) {
+    var model = data.model,
+        response = data.response,
+        options = data.options;
+
+    console.log('Model Id:', model.id);
+    console.log('Response:', JSON.stringify(response);
+    console.log('Options used:' JSON.stringify(options));
+})
+.catch(function(data) {
+    if (_.isError(data)) {
+        console.error(data)
+    } else {
+        console.log('Failed to fetch contact:', data.response.statusText);
+    }
+});
+```
+
+<br/>
+**Saving a model**
+
+```javascript
+// Obtain model
+var contact = collection.get(1);
+
+// Change  attributes
+contact.set('name', 'emaphp');
+
+// Save changes
+contact.save()
+.then(function(data) {
+    // ...
+})
+.catch(function(data) {
+    if (_.isError(data)) {
+        console.error(data)
+    } else {
+        console.log('Failed to save contact:', data.response.statusText);
+    }
+});
+```
+
+<br/>
+**Deleting a model**
+
+```javascript
+// Obtain model
+var contact = collection.get(1);
+
+// Destroy model
+contact.destroy()
+.then(function(data) {
+    // ...
+})
+.catch(function(data) {
+    if (_.isError(data)) {
+        console.error(data)
+    } else {
+        console.log('Failed to delete contact:', data.response.statusText);
+    }
+});
+```
+
+
+<br/>
+###Backbone.Async.Collection
+
+<br/>
+When invoking the methods *fetch*, *create*, *update* or *delete* a new *Promise* instance is returned. Resolve and rejection callbacks receive a single argument containing the following properties:
+
+ * model / collection: The model / collection instance that invokes the synchronization method.
+ * response: On success, a JSON object with the values received. On error, an XHR instance.
+ * options: Options used for this request.
+
+<br/>
+The *update* and *delete* methods are just wrappers for *Async.Model::save* and *Async.Collection::destroy* respectively. Callbacks for *fetch* receive a collection instance, while *create*, *update* and *delete* callbacks receive the corresponding model.
+
+<br/>
+**Fetching a collection**
 ```javascript
 var Contacts = Backbone.Async.Collection.extend({
     url: '/contacts'
@@ -45,7 +141,7 @@ var Contacts = Backbone.Async.Collection.extend({
 
 var contacts = new Contacts();
 
-//fetching a collection
+// Fetch a collection
 contacts.fetch({foo: 'bar'})
 .then(function(data) {
     var collection = data.collection,
@@ -66,43 +162,95 @@ contacts.fetch({foo: 'bar'})
 ```
 
 <br/>
-**Backbone.Async.Model**
+**Creating models**
+
 ```javascript
-var Contact = Backbone.Async.Model.extend({
-    urlRoot: '/contacts'
+// Values to save
+var values = {title: 'Hi', message: 'Hello World'};
+
+// Collection class
+var Notes = Backbone.Async.Collection.extend({
+    url: '/notes'
 });
 
-var contact = new Contact({id: 1});
+var notes = new Notes();
 
-//fetch by id
-contact.fetch()
-.then(function(data) {
+// Create new model
+notes.create(values, {
+    foo: 'bar',
+    wait: true
+})
+.then(function (data) {
     var model = data.model,
         response = data.response,
         options = data.options;
-
-    console.log('Model Id:', model.id);
-    console.log('Response:', JSON.stringify(response);
-    console.log('Options used:' JSON.stringify(options));
+        
+    console.log('Model ID:', model.id);
+    console.log('Response:', JSON.stringify(response));
+    console.log('Options used:'. JSON.stringify(options));
 })
-.catch(function(data) {
+.catch(function (data) {
     if (_.isError(data)) {
-        console.error(data)
+        console.error(data);
     } else {
-        console.log('Failed to fetch contact:', data.response.statusText);
+        console.log('Failed to create model:', data.response.statusText);
     }
 });
 ```
 
-Resolve and rejection callbacks receive a single argument containing the following properties:
+<br/>
+**Updating models**
+```javascript
+// Get contact by ID
+contact = contacts.get(1);
 
- * model / collection: The model or collection instance that invokes the synchronization method.
- * response: On success, a JSON object with the values received. On error, an XHR instance.
- * options: Options used for this request.
+// Update attributes
+contact.set('name', 'emaphp');
+
+// Send request
+contacts.update(contact, {
+    foo: 'bar'
+})
+.then(function (data) {
+    var model = data.model,
+        response = data.response,
+        options = data.options;
+        
+    console.log('Contact has been updated!');
+})
+.catch(function (data) {
+    if (_.isError(data)) {
+        console.error(data);
+    } else {
+        console.log('Failed to create model:', data.response.statusText);
+    }
+});
+```
 
 <br/>
-*Async.Collection.create* is a special case being that its resolver does receive a model instead of a collection.
+**Deleting models**
+```javascript
+// Get contact by ID
+contact = contacts.get(1);
 
+contacts.delete(contact, {
+    foo: 'bar'
+})
+.then(function (data) {
+    var model = data.model,
+        response = data.response,
+        options = data.options;
+    
+    console.log('Model with ID', model.id, 'has been deleted');
+})
+.catch(function (data) {
+    if (_.isError(data)) {
+        console.error(data);
+    } else {
+        console.log('Failed to delete model:', data.response.statusText);
+    }
+});
+```
 
 <br/>
 ###Events
