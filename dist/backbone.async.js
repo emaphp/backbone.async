@@ -276,33 +276,68 @@
     });
 
     //
-    // Async.Storage
-    // -------------
+    // Async.Store
+    // -----------
 
-    var Storage = Async.Storage = function(options) {
-        if (options) {
-            if (options.Collection) {
-                this.Collection = options.Collection;
-            }
-            
-            if (options.Model) {
-                this.Model = options.Model;
-            } else if (options.Collection && options.Collection.model) {
-                this.Model = options.Collection.model;
-            }
-        }
-        
+    var Store = Async.Store = function(options) {
+        this.options = options ? _.clone(options) : {};
         this.loaded = false;
         this.initialize.apply(this, arguments);
     };
 
-    // Include Backbone.Events in Storage class prototype
-    _.extend(Storage.prototype, Backbone.Events, {
+    // Returns an options object that overrides event handlers
+    var overrideEventCallbacks = function (store, event, options, onSuccess) {
+        var success = options.success;
+        var error = options.error;
+        var complete = options.complete;
+        var afterArguments = ['after:' + event];
+
+        return _.extend(options, {
+            success: function (collection, response, options) {
+                if (onSuccess) {
+                    onSuccess();
+                }
+
+                if (success) {
+                    success(collection, response, options);
+                }
+
+                afterArguments = afterArguments.concat(_.toArray(arguments), [true]);
+            },
+
+            error: function (collection, response, options) {
+                if (error) {
+                    error(collection, response, options);
+                }
+
+                afterArguments = afterArguments.concat(_.toArray(arguments), [false]);
+            },
+
+            complete: function (response, status) {
+                var options = afterArguments[3];
+
+                if (!options.silent) {
+                    store.trigger.apply(store, afterArguments);
+                }
+
+                if (complete) {
+                    complete(response, status);
+                }
+            }
+        });
+    };
+
+    // Include Backbone.Events in Store class prototype
+    _.extend(Store.prototype, Backbone.Events, {
         initialize: function(){},
 
         // Fetchs a collection
         fetchAll: function(options) {
-            if (this.loaded) {
+            options = options || {};
+            force = !!options.force;
+
+            // Return a resolved promise if already loaded
+            if (this.loaded && !force) {
                 return Promise.resolve({
                     collection: this.collection,
                     options: options
@@ -310,40 +345,22 @@
             }
 
             this._initCollection();
-            options = options || {};
-            var self = this,
-                mustTrigger = !options.silent;
 
-            return new Promise(function(resolve, reject) {
-                if (mustTrigger) {
-                    self.trigger('before:fetchAll', self.collection, options);
-                }
+            if (!options.silent) {
+                this.trigger('before:fetchAll', this.collection, options);
+            }
 
-                self.collection.fetch(options)
-                .then(function(data) {
-                    if (mustTrigger) {
-                        self.trigger('after:fetchAll', data.collection, data.response, data.options, true);
-                    }
+            var onSuccess = (function() {
+                this.loaded = true;
+            }).bind(this);
 
-                    self.loaded = true;
-                    resolve(data);
-                })
-                .catch(function(data) {
-                    if (mustTrigger) {
-                        if (_.isError(data)) {
-                            self.trigger('after:fetchAll', data, undefined, undefined, false);
-                        } else {
-                            self.trigger('after:fetchAll', data.collection, data.response, data.options, false);
-                        }
-                    }
-
-                    reject(data);
-                });
-            });
+            return this.collection.fetch(overrideEventCallbacks(this, 'fetchAll', options, onSuccess));
         },
 
-        // Fetchs a model
-        fetch: function(id, options) {
+        // Fetchs a model by ID
+        fetchById: function(id, options) {
+            options = options || {};
+
             if (this.collection) {
                 var stored = this.collection.get(id);
                 if (stored) {
@@ -354,124 +371,74 @@
                 }
             }
 
-            if (!this.Model) {
+            if (!this.modelClass) {
                 throw new Error('No Model class defined');
             }
 
             this._initCollection();
-            options = options || {};
-            var self = this,
-                mustTrigger = !options.silent;
 
-            return new Promise(function(resolve, reject) {
-                var model = new self.Model();
-                model.set(self.Model.idAttribute || 'id', id);
+            // Create model instance
+            var model = new this.modelClass();
+            model.set(this.modelClass.idAttribute || 'id', id);
 
-                if (mustTrigger) {
-                    self.trigger('before:fetch', model, options);
-                }
+            if (!options.silent) {
+                this.trigger('before:fetchById', model, options);
+            }
 
-                model.fetch(options)
-                .then(function(data) {
-                    if (mustTrigger) {
-                        self.trigger('after:fetch', data.model, data.response, data.options, true);
-                    }
+            var onSuccess = (function() {
+                this.add(model);
+            }).bind(this);
 
-                    self.collection.add(model);
-                    self.listenToOnce(model, 'after:destroy', function(model, options, success) {
-                        if (success) {
-                            self.collection.remove(model, _.extend({silent: true}, options));
-                        }
-                    });
-                    resolve(data);
-                })
-                .catch(function(data) {
-                    if (mustTrigger) {
-                        if (_.isError(data)) {
-                            self.trigger('after:fetch', data, undefined, undefined, false);
-                        } else {
-                            self.trigger('after:fetch', data.model, data.response, data.options, false);
-                        }
-                    }
-
-                    reject(data);
-                });
-            });
-        },
-
-        // Stores a model
-        store: function(model) {
-            this._initCollection();
-            this.collection.push(model);
-            this.listenToOnce(model, 'after:destroy', function(model, response, options, success) {
-                if (success) {
-                    this.collection.remove(model, _.extend({silent: true}, options));
-                }
-            });
-        },
-
-        // Obtains a model by id
-        get: function(id) {
-            this._initCollection();
-            return this.collection.get(id);
+            return model.fetch(overrideEventCallbacks(this, 'fetchById', options, onSuccess));
         },
 
         // Wrapper for Async.Collection.create
         create: function(attributes, options) {
-            if (!this.Model) {
+            if (!this.modelClass) {
                 throw new Error('No Model class defined');
             }
 
             this._initCollection();
             options = options || {};
-            var self = this,
-                mustTrigger = !options.silent;
+            
+            if (!options.silent) {
+                this.trigger('before:create', this.collection, attributes, options);
+            }
 
-            return new Promise(function(resolve, reject) {
-                if (mustTrigger) {
-                    self.trigger('before:create', self.collection, attributes, options);
-                }
+            return this.collection.create(attributes, overrideEventCallbacks(this, 'create', options));
+        },
 
-                self.collection.create(attributes, options)
-                .then(function(data) {
-                    if (mustTrigger) {
-                        self.trigger('after:create', data.model, data.response, data.options, true);
-                    }
-
-                    self.listenToOnce(data.model, 'after:destroy', function(model, options, success) {
-                        if (success) {
-                            self.collection.remove(model, _.extend({silent: true}, options));
-                        }
-                    });
-                    resolve(data);
-                })
-                .catch(function(data) {
-                    if (mustTrigger) {
-                        if (_.isError(data)) {
-                            self.trigger('after:create', data, undefined, undefined, false);
-                        } else {
-                            self.trigger('after:create', data.model, data.response, data.options, false);
-                        }
-                    }
-                    reject(data);
-                });
-            });
+        length: function () {
+            if (this.collection) {
+                return this.collection.length;
+            }
         },
 
         // Initializes the internal collection instance
         _initCollection: function() {
-            if (!this.Collection) {
+            if (!this.collectionClass) {
                 throw new Error('No Collection class defined');
             }
 
             if (!this.collection) {
-                this.collection = new this.Collection();
+                this.collection = new this.collectionClass();
             }
         }
     });
 
-    // Make Storage class extendable
-    Storage.extend = Backbone.Model.extend;
+    // Add proxy methods
+    var methods = ['reset', 'get', 'add', 'remove',
+        'shift', 'pop', 'push', 'unshift',
+        'where', 'findWhere', 'toJSON', 'sort'];
+
+    _.each(methods, function (method) {
+        Store.prototype[method] = function () {
+            return this.collection[method].apply(this.collection, arguments);
+        };
+    });
+
+    // Make Store class extendable
+    Store.extend = Backbone.Model.extend;
 
     return Async;
 }));
