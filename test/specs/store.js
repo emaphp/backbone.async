@@ -20,8 +20,8 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var storage = new FIXTURES.ContactsStorage();
-            storage.fetch(1, {test: true, silent:false})
+            var storage = new FIXTURES.ContactsStore();
+            storage.fetchById(1, {test: true, silent: false})
             .then(function(data) {
                 expect(data).to.be.a('object');
                 expect(data).to.have.property('model');
@@ -62,8 +62,8 @@ describe("ASync.Storage tests", function() {
             var callback1 = sinon.spy();
             var callback2 = sinon.spy();
 
-            var storage = new FIXTURES.ContactsStorage();
-            storage.fetch(2)
+            var storage = new FIXTURES.ContactsStore();
+            storage.fetchById(2)
             .then(callback1)
             .then(callback2)
             .then(function(data) {
@@ -92,76 +92,36 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var storage = new FIXTURES.ContactsStorage();
-            var obj = _.extend({}, Backbone.Events);
-            var beforeCallback = sinon.spy();
-            var afterCallback = sinon.spy();
-            obj.listenTo(storage, 'before:fetch', beforeCallback);
-            obj.listenTo(storage, 'after:fetch', afterCallback);
+            var storage = new FIXTURES.ContactsStore();
+            
+            var successCallback = sinon.spy();
+            var completeCallback = sinon.spy();
 
-            storage.fetch(3, {test: true, silent:false})
-            .then(function(data) {
-                expect(beforeCallback.called).to.be.true;
-                expect(afterCallback.called).to.be.true;
-                expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
-
-                var beforeModel = beforeCallback.args[0][0];
-                var beforeOptions = beforeCallback.args[0][1];
-                expect(beforeModel).to.be.a('object');
-                expect(beforeOptions).to.be.a('object');
-
-                expect(beforeOptions).to.have.property('test');
-                expect(beforeOptions).to.have.property('silent');
-                expect(beforeOptions.test).to.be.true;
-                expect(beforeOptions.silent).to.be.false;
-
-                var afterModel = afterCallback.args[0][0];
-                var response = afterCallback.args[0][1];
-                var afterOptions = afterCallback.args[0][2];
-                expect(afterModel).to.be.a('object');
-                expect(response).to.be.a('object');
-                expect(afterOptions).to.be.a('object');
-                
-                expect(response).to.deep.equal(value);
-                expect(afterModel.attributes).to.be.deep.equal(value);
-                
-                expect(afterOptions).to.have.property('test');
-                expect(afterOptions).to.have.property('silent');
-                expect(afterOptions.test).to.be.true;
-                expect(afterOptions.silent).to.be.false;
-
-                var success = afterCallback.args[0][3];
-                expect(success).to.be.true;
-                done();
+            storage.fetchById(3, {
+                test: true,
+                silent:false,
+                success: successCallback,
+                complete: completeCallback
             })
-            .catch(function(err) { done(err); });
-
-            server.respond();
-        });
-
-        it('must not call event handlers', function(done) {
-            var value = { id: 4, name: "Emmanuel", surname: "Antico"};
-            server.respondWith(
-                'GET',
-                '/contacts/4',
-                [
-                    200,
-                    {"Content-Type": "application/json"},
-                    JSON.stringify(value)
-                ]
-            );
-
-            var storage = new FIXTURES.ContactsStorage();
-            var obj = _.extend({}, Backbone.Events);
-            var beforeCallback = sinon.spy();
-            var afterCallback = sinon.spy();
-            obj.listenTo(storage, 'before:fetch', beforeCallback);
-            obj.listenTo(storage, 'after:fetch', afterCallback);
-
-            storage.fetch(4, {test: false, silent: true})
             .then(function(data) {
-                expect(beforeCallback.called).to.be.false;
-                expect(afterCallback.called).to.be.false;
+                expect(successCallback.called).to.be.true;
+                expect(completeCallback.called).to.be.true;
+
+                expect(successCallback.calledBefore(completeCallback)).to.be.true;
+
+                var successModel = successCallback.args[0][0];
+                expect(successModel.attributes).to.deep.equal(value);
+                var successResponse = successCallback.args[0][1];
+                expect(successResponse).to.deep.equal(value);
+                var successOptions = successCallback.args[0][2];
+                expect(successOptions.test).to.be.true;
+                expect(successOptions.silent).to.be.false;
+
+                var completeResponse = completeCallback.args[0][0];
+                expect(completeResponse.status).to.equal(200);
+                var completeStatus = completeCallback.args[0][1];
+                expect(completeStatus).to.equal('success');
+
                 done();
             })
             .catch(function(err) { done(err); });
@@ -181,26 +141,28 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var storage = new FIXTURES.ContactsStorage();
-            storage.fetch(5)
+            var storage = new FIXTURES.ContactsStore();
+            storage.fetchById(5)
             .then(function(data) {
-                var obj = _.extend({}, Backbone.Events);
-                var beforeCallback = sinon.spy();
-                var afterCallback = sinon.spy();
-                obj.listenTo(storage, 'before:fetch', beforeCallback);
-                obj.listenTo(storage, 'after:fetch', afterCallback);
+                server.respondWith(
+                    'GET',
+                    '/contacts/5',
+                    [
+                        500,
+                        null,
+                        ''
+                    ]
+                );
 
-                storage.fetch(5, {test: true, silent: false})
+                storage.fetchById(5, {test: true, silent: false})
                 .then(function(data) {
                     expect(data).to.be.a('object');
                     expect(data).to.have.property('model');
                     expect(data).to.not.have.property('response');
                     expect(data).to.have.property('options');
 
-                    expect(beforeCallback.called).to.be.false;
-                    expect(afterCallback.called).to.be.false;
-
-                    expect(storage.collection.models.length).to.equal(1);
+                    expect(storage.length()).to.equal(1);
+                    
                     var model = storage.get(5);
                     expect(model.attributes).to.deep.equal(value);
                     expect(storage.loaded).to.be.false;
@@ -240,7 +202,7 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var storage = new FIXTURES.ContactsStorage();
+            var storage = new FIXTURES.ContactsStore();
             storage.fetchAll({test: true, silent:false})
             .then(function(data) {
                 expect(data).to.be.a('object');
@@ -252,7 +214,7 @@ describe("ASync.Storage tests", function() {
                 var model = data.collection.get(1);
                 expect(model.attributes).to.deep.equal({id: 1, name: 'Curly'});
 
-                expect(storage.collection.models.length).to.equal(3);
+                expect(storage.length()).to.equal(3);
                 var model = storage.get(1);
                 expect(model.attributes).to.deep.equal({id: 1, name: 'Curly'});
                 expect(storage.loaded).to.be.true;
@@ -289,7 +251,7 @@ describe("ASync.Storage tests", function() {
             var callback1 = sinon.spy();
             var callback2 = sinon.spy();
 
-            var storage = new FIXTURES.ContactsStorage();
+            var storage = new FIXTURES.ContactsStore();
             storage.fetchAll({test: true, silent:false})
             .then(callback1)
             .then(callback2)
@@ -323,18 +285,31 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var storage = new FIXTURES.ContactsStorage();
-            var obj = _.extend({}, Backbone.Events);
+            var storage = new FIXTURES.ContactsStore();
+            
             var beforeCallback = sinon.spy();
             var afterCallback = sinon.spy();
-            obj.listenTo(storage, 'before:fetchAll', beforeCallback);
-            obj.listenTo(storage, 'after:fetchAll', afterCallback);
+            var successCallback = sinon.spy();
+            var completeCallback = sinon.spy();
 
-            storage.fetchAll({test: true, silent:false})
+            storage.collection.on('before:fetch', beforeCallback);
+            storage.collection.on('after:fetch', afterCallback);
+
+            storage.fetchAll({
+                test: true,
+                silent:false,
+                success: successCallback,
+                complete: completeCallback
+            })
             .then(function(data) {
                 expect(beforeCallback.called).to.be.true;
                 expect(afterCallback.called).to.be.true;
-                expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
+                expect(successCallback.called).to.be.true;
+                expect(completeCallback.called).to.be.true;
+
+                expect(beforeCallback.calledBefore(successCallback)).to.be.true;
+                expect(successCallback.calledBefore(afterCallback)).to.be.true;
+                expect(afterCallback.calledBefore(completeCallback)).to.be.true;
 
                 var beforeCollection = beforeCallback.args[0][0];
                 var beforeOptions = beforeCallback.args[0][1];
@@ -362,6 +337,20 @@ describe("ASync.Storage tests", function() {
 
                 var success = afterCallback.args[0][3];
                 expect(success).to.be.true;
+
+                var successCollection = successCallback.args[0][0];
+                expect(successCollection).to.deep.equal(storage.collection);
+                var successResponse = successCallback.args[0][1];
+                expect(successResponse).to.deep.equal(values);
+                var successOptions = successCallback.args[0][2];
+                expect(successOptions.test).to.be.true;
+                expect(successOptions.silent).to.be.false;
+
+                var completeResponse = completeCallback.args[0][0];
+                expect(completeResponse.status).to.equal(200);
+                var completeStatus = completeCallback.args[0][1];
+                expect(completeStatus).to.equal('success');
+
                 done();
             })
             .catch(function(err) { done(err); });
@@ -386,17 +375,29 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var storage = new FIXTURES.ContactsStorage();
-            var obj = _.extend({}, Backbone.Events);
+            var storage = new FIXTURES.ContactsStore();
+            
             var beforeCallback = sinon.spy();
             var afterCallback = sinon.spy();
-            obj.listenTo(storage, 'before:fetchAll', beforeCallback);
-            obj.listenTo(storage, 'after:fetchAll', afterCallback);
+            var successCallback = sinon.spy();
+            var completeCallback = sinon.spy();
 
-            storage.fetchAll({test: true, silent:true})
+            storage.collection.on('before:fetch', beforeCallback);
+            storage.collection.on('after:fetch', afterCallback);
+
+            storage.fetchAll({
+                test: true,
+                silent:true,
+                complete: completeCallback,
+                success: successCallback
+            })
             .then(function(data) {
                 expect(beforeCallback.called).to.be.false;
                 expect(afterCallback.called).to.be.false;
+
+                expect(successCallback.called).to.be.true;
+                expect(completeCallback.called).to.be.true;
+
                 done();
             })
             .catch(function(err) { done(err); });
@@ -421,7 +422,7 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var storage = new FIXTURES.ContactsStorage();
+            var storage = new FIXTURES.ContactsStore();
             storage.fetchAll()
             .then(function(data) {
                 expect(data).to.be.a('object');
@@ -429,11 +430,10 @@ describe("ASync.Storage tests", function() {
                 expect(data).to.have.property('response');
                 expect(data).to.have.property('options');
 
-                var obj = _.extend({}, Backbone.Events);
                 var beforeCallback = sinon.spy();
                 var afterCallback = sinon.spy();
-                obj.listenTo(storage, 'before:fetchAll', beforeCallback);
-                obj.listenTo(storage, 'after:fetchAll', afterCallback);
+                storage.collection.on('before:fetch', beforeCallback);
+                storage.collection.on('after:fetch', afterCallback);
 
                 storage.fetchAll({test: true, silent:false})
                 .then(function(data) {
@@ -475,8 +475,8 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var storage = new FIXTURES.NotesStorage();
-            storage.fetch(1, {test: true, silent: false})
+            var storage = new FIXTURES.NotesStore();
+            storage.fetchById(1, {test: true, silent: false})
             .then(function() {
             })
             .catch(function(data) {
@@ -514,81 +514,36 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var storage = new FIXTURES.NotesStorage();
-            var obj = _.extend({}, Backbone.Events);
-            var beforeCallback = sinon.spy();
-            var afterCallback = sinon.spy();
-            obj.listenTo(storage, 'before:fetch', beforeCallback);
-            obj.listenTo(storage, 'after:fetch', afterCallback);
+            var storage = new FIXTURES.NotesStore();
+            
+            var errorCallback = sinon.spy();
+            var completeCallback = sinon.spy();
 
-            storage.fetch(2, {test: true, silent: false})
+            storage.fetchById(2, {
+                test: true,
+                silent: false,
+                error: errorCallback,
+                complete: completeCallback
+            })
             .then(function() {})
             .catch(function(data) {
-                expect(beforeCallback.called).to.be.true;
-                expect(afterCallback.called).to.be.true;
-                expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
+                expect(errorCallback.called).to.be.true;
+                expect(completeCallback.called).to.be.true;
 
-                var beforeModel = beforeCallback.args[0][0];
-                var beforeOptions = beforeCallback.args[0][1];
-                expect(beforeModel).to.be.a('object');
-                expect(beforeOptions).to.be.a('object');
+                expect(errorCallback.calledBefore(completeCallback)).to.be.true;
 
-                expect(beforeOptions).to.have.property('test');
-                expect(beforeOptions).to.have.property('silent');
-                expect(beforeOptions.test).to.be.true;
-                expect(beforeOptions.silent).to.be.false;
+                var errorModel = errorCallback.args[0][0];
+                expect(errorModel.attributes).to.deep.equal({id: 2});
+                var errorRespose = errorCallback.args[0][1];
+                expect(errorRespose.status).to.equal(500);
+                var errorOptions = errorCallback.args[0][2];
+                expect(errorOptions.test).to.be.true;
+                expect(errorOptions.silent).to.be.false;
 
-                var afterModel = afterCallback.args[0][0];
-                var response = afterCallback.args[0][1];
-                var afterOptions = afterCallback.args[0][2];
-                expect(afterModel).to.be.a('object');
-                expect(response).to.be.a('object');
-                expect(afterOptions).to.be.a('object');
-
-                expect(afterOptions).to.have.property('test');
-                expect(afterOptions).to.have.property('silent');
-                expect(afterOptions.test).to.be.true;
-                expect(afterOptions.silent).to.be.false;
-                expect(response.status).to.equal(500);
-                expect(response.statusText).to.equal("Internal Server Error");
-
-                var success = afterCallback.args[0][3];
-                expect(success).to.be.false;
-
-                done();
-            });
-
-            server.respond();
-        });
-
-        it('must not call event handlers', function(done) {
-            server.respondWith(
-                'GET',
-                '/notes/3',
-                [
-                    500,
-                    null,
-                    ''
-                ]
-            );
-
-            var storage = new FIXTURES.NotesStorage();
-            var obj = _.extend({}, Backbone.Events);
-            var beforeCallback = sinon.spy();
-            var afterCallback = sinon.spy();
-            obj.listenTo(storage, 'before:fetch', beforeCallback);
-            obj.listenTo(storage, 'after:fetch', afterCallback);
-
-            storage.fetch(3, {test: false, silent: true})
-            .then(function() {})
-            .catch(function(data) {
-                expect(beforeCallback.called).to.be.false;
-                expect(afterCallback.called).to.be.false;
-
-                expect(data.options).to.have.property('test');
-                expect(data.options).to.have.property('silent');
-                expect(data.options.test).to.be.false;
-                expect(data.options.silent).to.be.true;
+                var completeResponse = completeCallback.args[0][0];
+                expect(completeResponse.status).to.equal(500);
+                var completeStatus = completeCallback.args[0][1];
+                expect(completeStatus).to.equal('error');
 
                 done();
             });
@@ -608,8 +563,8 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var storage = new FIXTURES.NotesStorage();
-            storage.fetch(4)
+            var storage = new FIXTURES.NotesStore();
+            storage.fetchById(4)
             .then(function(data) {
                 throw new Error();
             })
@@ -634,7 +589,7 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var storage = new FIXTURES.NotesStorage();
+            var storage = new FIXTURES.NotesStore();
 
             storage.fetchAll({test: true, silent: false})
             .then(function() {
@@ -675,20 +630,33 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var obj = _.extend({}, Backbone.Events);
             var beforeCallback = sinon.spy();
             var afterCallback = sinon.spy();
-            var storage = new FIXTURES.NotesStorage();
-            obj.listenTo(storage, 'before:fetchAll', beforeCallback);
-            obj.listenTo(storage, 'after:fetchAll', afterCallback);
+            var errorCallback = sinon.spy();
+            var completeCallback = sinon.spy();
 
-            storage.fetchAll({test: true, silent: false})
+            var storage = new FIXTURES.NotesStore();
+
+            storage.collection.on('before:fetch', beforeCallback);
+            storage.collection.on('after:fetch', afterCallback);
+
+            storage.fetchAll({
+                test: true,
+                silent: false,
+                complete: completeCallback,
+                error: errorCallback
+            })
             .then(function() {
             })
             .catch(function(data) {
                 expect(beforeCallback.called).to.be.true;
                 expect(afterCallback.called).to.be.true;
-                expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
+                expect(errorCallback.called).to.be.true;
+                expect(completeCallback.called).to.be.true;
+
+                expect(beforeCallback.calledBefore(errorCallback)).to.be.true;
+                expect(errorCallback.calledBefore(afterCallback)).to.be.true;
+                expect(afterCallback.calledBefore(completeCallback)).to.be.true;
 
                 var beforeCollection = beforeCallback.args[0][0];
                 var beforeOptions = beforeCallback.args[0][1];
@@ -717,6 +685,19 @@ describe("ASync.Storage tests", function() {
                 var success = afterCallback.args[0][3];
                 expect(success).to.be.false;
 
+                var errorCollection = errorCallback.args[0][0];
+                expect(errorCollection).to.deep.equal(storage.collection);
+                var errorResponse = errorCallback.args[0][1];
+                expect(errorResponse.status).to.equal(500);
+                var errorOptions = errorCallback.args[0][2];
+                expect(errorOptions.test).to.be.true;
+                expect(errorOptions.silent).to.be.false;
+
+                var completeResponse = completeCallback.args[0][0];
+                expect(completeResponse.status).to.equal(500);
+                var completeStatus = completeCallback.args[0][1];
+                expect(completeStatus).to.equal('error');
+
                 expect(storage.collection.length).to.equal(0);
                 expect(storage.loaded).to.be.false;
                 done();
@@ -737,18 +718,27 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var obj = _.extend({}, Backbone.Events);
             var beforeCallback = sinon.spy();
             var afterCallback = sinon.spy();
-            var storage = new FIXTURES.NotesStorage();
-            obj.listenTo(storage, 'before:fetchAll', beforeCallback);
-            obj.listenTo(storage, 'after:fetchAll', afterCallback);
+            var errorCallback = sinon.spy();
+            var completeCallback = sinon.spy();
 
-            storage.fetchAll({test: false, silent: true})
+            var storage = new FIXTURES.NotesStore();
+            storage.on('before:fetch', beforeCallback);
+            storage.on('after:fetch', afterCallback);
+
+            storage.fetchAll({
+                test: false,
+                silent: true,
+                error: errorCallback,
+                complete: completeCallback
+            })
             .then(function() {})
             .catch(function(data) {
                 expect(beforeCallback.called).to.be.false;
                 expect(afterCallback.called).to.be.false;
+                expect(errorCallback.called).to.be.true;
+                expect(completeCallback.called).to.be.true;
                 done();
             });
 
@@ -772,7 +762,7 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var storage = new FIXTURES.NotesStorage();
+            var storage = new FIXTURES.NotesStore();
 
             storage.fetchAll()
             .then(function(data) {
@@ -810,19 +800,22 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var storage = new FIXTURES.ContactsStorage();
+            var storage = new FIXTURES.ContactsStore();
 
-            storage.fetch(1)
+            storage.fetchById(1)
             .then(function(data) {
-                expect(storage.collection.length).to.equal(1);
+                expect(storage.length()).to.equal(1);
+                
                 var contact = storage.get(1);
                 expect(contact.id).to.equal(1);
 
-                contact.destroy()
+                storage.delete(contact)
                 .then(function(data) {
-                    expect(storage.collection.length).to.equal(0);
+                    expect(storage.length()).to.equal(0);
+                    
                     var contact = storage.get(1);
                     expect(contact).to.be.undefined;
+
                     done();
                 })
                 .catch(function(err) { done(err); });
@@ -833,38 +826,6 @@ describe("ASync.Storage tests", function() {
 
             server.respond();
         })
-    });
-
-    describe('Save tests', function() {
-        it('must save value', function(done) {
-            server.respondWith(
-                'POST',
-                '/contacts',
-                [
-                    200,
-                    {"Content-Type": "application/json"},
-                    JSON.stringify({id: 1, name: 'Emmanuel', surname: 'Antico'})
-                ]
-            );
-
-            var storage = new FIXTURES.ContactsStorage();
-            var model = new FIXTURES.Contact();
-
-            model.set({name: 'Emmanuel', surname: 'Antico'});
-
-            model.save()
-            .then(function(data) {
-                storage.store(model);
-                expect(storage.collection).to.be.a('object');
-                expect(storage.collection.length).to.equal(1);
-                var contact = storage.get(1);
-                expect(contact.attributes).to.deep.equal(model.attributes);
-                done();
-            })
-            .catch(function(err) {done(err)});
-
-            server.respond();
-        });
     });
 
     describe('Update tests', function() {
@@ -891,15 +852,15 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var storage = new FIXTURES.ContactsStorage();
+            var storage = new FIXTURES.ContactsStore();
 
-            storage.fetch(1)
+            storage.fetchById(1)
             .then(function(data) {
                 var model = data.model;
                 model.set('name', 'emaphp');
                 expect(storage.get(1).get('name')).to.equal('emaphp');
 
-                model.save()
+                storage.update(model)
                 .then(function(data) {
                     expect(storage.get(1).get('name')).to.equal('emaphp');
                     done();
@@ -920,7 +881,7 @@ describe("ASync.Storage tests", function() {
 
     describe('Create tests', function() {
         it('must call then', function(done) {
-            var value = { name: "Emmanuel", surname: "Antico"};
+            var value = {name: "Emmanuel", surname: "Antico"};
 
             server.respondWith(
                 'POST',
@@ -932,7 +893,7 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var storage = new FIXTURES.ContactsStorage();
+            var storage = new FIXTURES.ContactsStore();
 
             storage.create(value, {test: true, silent: false})
             .then(function(data) {
@@ -950,7 +911,7 @@ describe("ASync.Storage tests", function() {
                 expect(data.options.test).to.be.true;
                 expect(data.options.silent).to.be.false;
 
-                expect(storage.collection.length).to.equal(1);
+                expect(storage.length()).to.equal(1);
                 done();
             })
             .catch(function(err){done(err)});
@@ -971,19 +932,30 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var obj = _.extend({}, Backbone.Events);
             var beforeCallback = sinon.spy();
             var afterCallback = sinon.spy();
+            var successCallback = sinon.spy();
+            var completeCallback = sinon.spy();
 
-            var storage = new FIXTURES.ContactsStorage();
-            obj.listenTo(storage, 'before:create', beforeCallback);
-            obj.listenTo(storage, 'after:create', afterCallback);
+            var storage = new FIXTURES.ContactsStore();
+            storage.collection.on('before:create', beforeCallback);
+            storage.collection.on('after:create', afterCallback);
 
-            storage.create(value, {test: true, silent: false})
+            storage.create(value, {
+                test: true,
+                silent: false,
+                success: successCallback,
+                complete: completeCallback
+            })
             .then(function(data) {
                 expect(beforeCallback.called).to.be.true;
                 expect(afterCallback.called).to.be.true;
-                expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
+                expect(successCallback.called).to.be.true;
+                expect(completeCallback.called).to.be.true;
+
+                expect(beforeCallback.calledBefore(successCallback)).to.be.true;
+                expect(successCallback.calledBefore(afterCallback)).to.be.true;
+                expect(afterCallback.calledBefore(completeCallback)).to.be.true;
 
                 var beforeCollection = beforeCallback.args[0][0];
                 var beforeAttrs = beforeCallback.args[0][1];
@@ -1018,6 +990,19 @@ describe("ASync.Storage tests", function() {
                 var success = afterCallback.args[0][3];
                 expect(success).to.be.true;
 
+                var successModel = successCallback.args[0][0]
+                expect(successModel).to.deep.equal(data.model);
+                var successResponse = successCallback.args[0][1];
+                expect(successResponse).to.deep.equal(_.extend({id: 1}, value));
+                var successOptions = successCallback.args[0][2];
+                expect(successOptions.test).to.be.true;
+                expect(successOptions.silent).to.be.false;
+
+                var completeResponse = completeCallback.args[0][0];
+                expect(completeResponse.status).to.equal(200);
+                var completeStatus = completeCallback.args[0][1];
+                expect(completeStatus).to.equal('success');
+
                 var model = storage.get(1);
                 expect(model.attributes).to.deep.equal(response);
 
@@ -1041,18 +1026,26 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var obj = _.extend({}, Backbone.Events);
             var beforeCallback = sinon.spy();
             var afterCallback = sinon.spy();
+            var successCallback = sinon.spy();
+            var completeCallback = sinon.spy();
 
-            var storage = new FIXTURES.ContactsStorage();
-            obj.listenTo(storage, 'before:create', beforeCallback);
-            obj.listenTo(storage, 'after:create', afterCallback);
+            var storage = new FIXTURES.ContactsStore();
+            storage.collection.on('before:create', beforeCallback);
+            storage.collection.on('after:create', afterCallback);
 
-            storage.create(value, {test: false, silent: true})
+            storage.create(value, {
+                test: false,
+                silent: true,
+                success: successCallback,
+                complete: completeCallback
+            })
             .then(function(data) {
                 expect(beforeCallback.called).to.be.false;
                 expect(afterCallback.called).to.be.false;
+                expect(successCallback.called).to.be.true;
+                expect(completeCallback.called).to.be.true;
                 done();
             })
             .catch(function(err){ done(err); });
@@ -1073,7 +1066,7 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var storage = new FIXTURES.NotesStorage();
+            var storage = new FIXTURES.NotesStore();
 
             storage.create({message: 'Hello World'}, {test: true, silent: false})
             .then(function(data){})
@@ -1093,7 +1086,7 @@ describe("ASync.Storage tests", function() {
                 expect(data.options.test).to.be.true;
                 expect(data.options.silent).to.be.false;
 
-                expect(storage.collection.length).to.equal(1);
+                expect(storage.length()).to.equal(1);
                 expect(data.model.attributes).to.deep.equal({message: 'Hello World'});
                 expect(data.model.id).to.be.undefined;
 
@@ -1114,17 +1107,16 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var storage = new FIXTURES.NotesStorage();
+            var storage = new FIXTURES.NotesStore();
 
             storage.create({message: 'Hello World'}, {wait: true})
             .then(function(data){})
             .catch(function(data) {
-                expect(storage.collection.length).to.equal(0);
+                expect(storage.length()).to.equal(0);
                 done();
             });
 
             server.respond();
-
         });
 
         it('must call event handlers', function(done) {
@@ -1140,20 +1132,31 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var obj = _.extend({}, Backbone.Events);
             var beforeCallback = sinon.spy();
             var afterCallback = sinon.spy();
+            var errorCallback = sinon.spy();
+            var completeCallback = sinon.spy();
 
-            var storage = new FIXTURES.NotesStorage();
-            obj.listenTo(storage, 'before:create', beforeCallback);
-            obj.listenTo(storage, 'after:create', afterCallback);
+            var storage = new FIXTURES.NotesStore();
+            storage.collection.on('before:create', beforeCallback);
+            storage.collection.on('after:create', afterCallback);
 
-            storage.create(value, {test: true, silent: false})
+            storage.create(value, {
+                test: true,
+                silent: false,
+                error: errorCallback,
+                complete: completeCallback
+            })
             .then(function(data){})
             .catch(function(data) {
                 expect(beforeCallback.called).to.be.true;
                 expect(afterCallback.called).to.be.true;
-                expect(beforeCallback.calledBefore(afterCallback)).to.be.true;
+                expect(errorCallback.called).to.be.true;
+                expect(completeCallback.called).to.be.true;
+
+                expect(beforeCallback.calledBefore(errorCallback)).to.be.true;
+                expect(errorCallback.calledBefore(afterCallback)).to.be.true;
+                expect(afterCallback.calledBefore(completeCallback)).to.be.true;
 
                 var beforeCollection = beforeCallback.args[0][0];
                 var beforeAttrs = beforeCallback.args[0][1];
@@ -1190,6 +1193,19 @@ describe("ASync.Storage tests", function() {
                 var success = afterCallback.args[0][3];
                 expect(success).to.be.false;
 
+                var errorModel = errorCallback.args[0][0];
+                expect(errorModel).to.deep.equal(data.model);
+                var errorResponse = errorCallback.args[0][1];
+                expect(errorResponse.status).to.equal(400);
+                var errorOptions = errorCallback.args[0][2];
+                expect(errorOptions.test).to.be.true;
+                expect(errorOptions.silent).to.be.false;
+
+                var completeResponse = completeCallback.args[0][0];
+                expect(completeResponse.status).to.equal(400);
+                var completeStatus = completeCallback.args[0][1];
+                expect(completeStatus).to.equal('error');
+
                 done();
             })
             .catch(function(err){done(err)});
@@ -1210,19 +1226,27 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var obj = _.extend({}, Backbone.Events);
             var beforeCallback = sinon.spy();
             var afterCallback = sinon.spy();
+            var errorCallback = sinon.spy();
+            var completeCallback = sinon.spy();
 
-            var storage = new FIXTURES.NotesStorage();
-            obj.listenTo(storage, 'before:create', beforeCallback);
-            obj.listenTo(storage, 'after:create', afterCallback);
+            var storage = new FIXTURES.NotesStore();
+            storage.collection.on('before:create', beforeCallback);
+            storage.collection.on('after:create', afterCallback);
 
-            storage.create(value, {test: false, silent: true})
+            storage.create(value, {
+                test: false,
+                silent: true,
+                error: errorCallback,
+                complete: completeCallback
+            })
             .then(function(data){})
             .catch(function(data) {
                 expect(beforeCallback.called).to.be.false;
                 expect(afterCallback.called).to.be.false;
+                expect(errorCallback.called).to.be.true;
+                expect(completeCallback.called).to.be.true;
                 done();
             });
 
@@ -1242,7 +1266,7 @@ describe("ASync.Storage tests", function() {
                 ]
             );
 
-            var storage = new FIXTURES.NotesStorage();
+            var storage = new FIXTURES.NotesStore();
 
             storage.create(value)
             .then(function() {
@@ -1252,50 +1276,6 @@ describe("ASync.Storage tests", function() {
                 expect(_.isError(data)).to.be.true;
                 done();
             });
-
-            server.respond();
-        });
-
-        it('must remove model', function(done) {
-            var value = {message: "Hello World"};
-
-            server.respondWith(
-                'POST',
-                '/notes',
-                [
-                    200,
-                    {'Content-type': 'application/json'},
-                    JSON.stringify(_.extend({id:1}, value))
-                ]
-            );
-
-            server.respondWith(
-                'DELETE',
-                '/notes/1',
-                [
-                    204,
-                    null,
-                    ''
-                ]
-            );
-
-            var storage = new FIXTURES.NotesStorage();
-
-            storage.create(value, {wait: true})
-            .then(function(data) {
-                var model = data.model;
-                expect(storage.collection.length).to.equal(1);
-
-                model.destroy({wait: true})
-                .then(function(data) {
-                      expect(storage.collection.length).to.equal(0);
-                      done();
-                })
-                .catch(function(err){done(err)});
-
-                server.respond();
-            })
-            .catch(function(err) {done(err)});
 
             server.respond();
         });

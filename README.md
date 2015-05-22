@@ -54,7 +54,7 @@ var Contact = Backbone.Async.Model.extend({
 var contact = new Contact({id: 1});
 
 // Fetch by id
-contact.fetch()
+contact.fetch({foo: 'bar'})
 .then(function(data) {
     var model = data.model,
         response = data.response,
@@ -84,9 +84,13 @@ var contact = collection.get(1);
 contact.set('name', 'emaphp');
 
 // Save changes
-contact.save()
+contact.save(null, {foo: 'bar'})
 .then(function(data) {
-    // ...
+    var model = data.model,
+        response = data.response,
+        options = data.options;
+        
+    console.log('Model with ID', model.id, 'saved');
 })
 .catch(function(data) {
     if (_.isError(data)) {
@@ -105,9 +109,13 @@ contact.save()
 var contact = collection.get(1);
 
 // Destroy model
-contact.destroy()
+contact.destroy({foo: 'bar'})
 .then(function(data) {
-    // ...
+    var model = data.model,
+        response = data.response,
+        options = data.options;
+        
+    console.log('Model with ID', model.id, 'deleted');
 })
 .catch(function(data) {
     if (_.isError(data)) {
@@ -130,7 +138,7 @@ When invoking the methods *fetch*, *create*, *update* or *delete* a new *Promise
  * options: Options used for this request.
 
 <br/>
-The *update* and *delete* methods are just wrappers for *Async.Model::save* and *Async.Collection::destroy* respectively. Callbacks for *fetch* receive a collection instance, while *create*, *update* and *delete* callbacks receive the corresponding model.
+The *update* and *delete* methods are just wrappers for *Async.Model::save* and *Async.Model::destroy* respectively. Callbacks for *fetch* receive a collection instance, while *create*, *update* and *delete* callbacks receive the corresponding model.
 
 <br/>
 **Fetching a collection**
@@ -260,6 +268,7 @@ contacts.delete(contact, {
 
 #####Async Model events
 
+<br/>
 ```javascript
 var Contact = Backbone.Async.Contact.extend({
     urlRoot: '/contacts'
@@ -271,7 +280,7 @@ contact.on('before:fetch', function(model, options) {
     console.log('Contact is being fetched...');
 });
 
-//fetch contact
+// Fetch contact
 contact.fetch()
 .then(function(data) {
     console.log('Contact fetched correctly');
@@ -308,6 +317,7 @@ contact.fetch()
 <br/>
 #####Async Collection events
 
+<br/>
 ```javascript
 var Contacts = Backbone.Async.Collection.extend({
     url: '/contacts'
@@ -317,17 +327,17 @@ var contacts = new Contacts();
 
 contacts.on('after:fetch', function(collection, response, options, success) {
     if (!success) {
-        console.log('Error:' + _.isError(collection) ? collection : response.statusText);
+        console.log('Error:', _.isError(collection) ? collection : response.statusText);
     }
 });
 
-//fetch contacts
+// Fetch contacts
 contacts.fetch()
 .then(function(data) {
     //render collection
 })
 .catch(function(data) {
-    //handle error
+    console.log('Something went wrong');
 });
 ```
 
@@ -347,13 +357,27 @@ contacts.fetch()
 **after:create**
 > Arguments: *Async.Model* ***model***, *object* ***response***, *object* ***options***, *boolean* ***success***
 
-As a general rule, if an error is thrown during the execution of a method the event handler will call the *after* callback providing the error as first argument.
+<br/>
+**before:update**
+> Arguments: *Async.Model* ***model***, *object* ***options***
 
 <br/>
-###Event callbacks order
+**after:update**
+> Arguments: *Async.Model* ***model***, *object* ***response***, *object* ***options***, *boolean* ***success***
 
 <br/>
-Callbacks are evaluated in the following order:
+**before:delete**
+> Arguments: *Async.Model* ***model***, *object* ***options***
+
+<br/>
+**after:delete**
+> Arguments: *Async.Model* ***model***, *object* ***response***, *object* ***options***, *boolean* ***success***
+
+<br/>
+#####Event callbacks order
+
+<br/>
+Event callbacks are evaluated in the following order:
 
  * before:*event*
  * success / error
@@ -362,12 +386,12 @@ Callbacks are evaluated in the following order:
  * then / catch
 
 <br/>
-For example, when removing a model through *Async.Collection::delete* callbacks are invoked in the following order:
+Wrapper methods like *Async.Collection::update* and *Async.Collection::delete* behave as expected.  For example, when removing a model through *Async.Collection::delete* callbacks are invoked in the following order:
 
  * before:delete
- * before:destroy
+ * before:destroy (Model)
  * success / error
- * after:destroy
+ * after:destroy (Model)
  * after:delete
  * complete
  * then / catch

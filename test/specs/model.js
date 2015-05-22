@@ -7,7 +7,7 @@ describe("ASync.Model tests", function() {
         server.restore();
     });
 
-    /*describe('Fetch test', function() {
+    describe('Fetch test', function() {
         it('must equal attributes', function() {
             server.respondWith(
                 'GET',
@@ -412,6 +412,7 @@ describe("ASync.Model tests", function() {
             contact.save(null, {test: true, silent: false})
             .then(function(data) {
                 expect(data).to.be.a('object');
+                
                 expect(data).to.have.property('model');
                 expect(data).to.have.property('response');
                 expect(data).to.have.property('options');
@@ -805,10 +806,10 @@ describe("ASync.Model tests", function() {
 
             server.respond();
         });
-    });*/
+    });
 
     describe('Delete tests', function() {
-        /*it('must call then', function(done) {
+        it('must call then', function(done) {
             server.respondWith(
                 'DELETE',
                 '/contacts/1',
@@ -877,7 +878,7 @@ describe("ASync.Model tests", function() {
             .catch(function(err) { done(err); });
 
             server.respond();
-        });*/
+        });
 
         it('must call event handlers', function(done) {
             server.respondWith(
@@ -958,7 +959,7 @@ describe("ASync.Model tests", function() {
             server.respond();   
         });
 
-        /*it('must not call event handlers', function(done) {
+        it('must not call event handlers', function(done) {
             server.respondWith(
                 'DELETE',
                 '/contacts/4',
@@ -1010,10 +1011,10 @@ describe("ASync.Model tests", function() {
             });
 
             server.respond();
-        });*/
+        });
     });
 
-    /*describe('Delete fail tests', function() {
+    describe('Delete fail tests', function() {
         it('must call catch', function(done) {
             server.respondWith(
                 'DELETE',
@@ -1172,5 +1173,5 @@ describe("ASync.Model tests", function() {
 
             server.respond();
         });
-    });*/
+    });
 });

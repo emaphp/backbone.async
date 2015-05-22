@@ -137,6 +137,48 @@
         buildPrototype(Backbone.Collection.prototype, ['fetch'])
     );
 
+    // Overrides event callbacks when calling create/update/delete methods
+    var overrideEventCallbacks = function (collection, options, event, onSuccess) {
+        var success = options.success;
+        var error = options.error;
+        var complete = options.complete;
+        var afterArguments = ['after:' + event];
+
+        return _.extend(options, {
+            success: function (model, response, options) {
+                if (onSuccess) {
+                    onSuccess.apply(collection, arguments);
+                }
+
+                if (success) {
+                    success(model, response, options);
+                }
+
+                afterArguments = afterArguments.concat(_.toArray(arguments), [true]);
+            },
+
+            error: function (model, response, options) {
+                if (error) {
+                    error(model, response, options);
+                }
+
+                afterArguments = afterArguments.concat(_.toArray(arguments), [false]);
+            },
+
+            complete: function (response, status) {
+                var options = afterArguments[3];
+
+                if (!options.silent) {
+                    collection.trigger.apply(collection, afterArguments);
+                }
+
+                if (complete) {
+                    complete(response, status);
+                }
+            }
+        });
+    };
+
     _.extend(Async.Collection.prototype, {
         create: function(model, options) {
             options = options ? _.clone(options) : {};
@@ -153,35 +195,13 @@
                 this.add(model, options);
             }
 
-            var collection = this;
-            var success = options.success;
-            var error = options.error;
-
-            options.success = function(model, response) {
+            var onSuccess = function (model, response, options) {
                 if (options.wait) {
-                    collection.add(model, options);
-                }
-
-                if (success) {
-                    success(model, response, options);
-                }
-
-                if (!options.silent) {
-                    collection.trigger('after:create', model, response, options, true);
+                    this.add(model, options);
                 }
             };
 
-            options.error = function (model, response) {
-                if (error) {
-                    error(model, response, options);
-                }
-
-                if (!options.silent) {
-                    collection.trigger('after:create', model, response, options, false);
-                }
-            };
-
-            return model.save(null, options);
+            return model.save(null, overrideEventCallbacks(this, options, 'create', onSuccess));
         },
 
         update: function (model, options) {
@@ -191,43 +211,11 @@
                 this.trigger('before:update', model, options);
             }
 
-            var collection = this;
-            var error = options.error;
-            var success = options.success;
-            var complete = options.complete;
-            var afterArguments = ['after:update'];
-
-            options.success = function (model, response, options) {
-                collection.add(model, _.extend({merge: true}, options));
-
-                if (success) {
-                    success(model, response, options);
-                }
-
-                afterArguments = afterArguments.concat(_.toArray(arguments), [true]);
+            var onSuccess = function (model, response, options) {
+                this.add(model, _.extend({merge: true}, options));
             };
 
-            options.error = function (model, response, options) {
-                if (error) {
-                    error(model, response, options);
-                }
-
-                afterArguments = afterArguments.concat(_.toArray(arguments), [false]);
-            };
-
-            options.complete = function (response, status) {
-                var options = afterArguments[3];
-
-                if (!options.silent) {
-                    collection.trigger.apply(collection, afterArguments);
-                }
-
-                if (complete) {
-                    complete(response, status);
-                }
-            };
-
-            return model.save(null, options);
+            return model.save(null, overrideEventCallbacks(this, options, 'update', onSuccess));
         },
 
         delete: function (model, options) {
@@ -237,41 +225,7 @@
                 this.trigger('before:delete', model, options);
             }
 
-            var collection = this;
-            var error = options.error;
-            var success = options.success;
-            var complete = options.complete;
-            var afterArguments = ['after:delete'];
-            
-            options.success = function (model, response, options) {
-                if (success) {
-                    success(model, response, options);
-                }
-
-                afterArguments = afterArguments.concat(_.toArray(arguments), [true]);
-            };
-
-            options.error = function (model, response, options) {
-                if (error) {
-                    error(model, response, options);
-                }
-
-                afterArguments = afterArguments.concat(_.toArray(arguments), [false]);
-            };
-
-            options.complete = function (response, status) {
-                var options = afterArguments[3];
-
-                if (!options.silent) {
-                    collection.trigger.apply(collection, afterArguments);
-                }
-
-                if (complete) {
-                    complete(response, status);    
-                }
-            };
-
-            return model.destroy(options);
+            return model.destroy(overrideEventCallbacks(this, options, 'delete'));
         }
     });
 
@@ -280,19 +234,24 @@
     // -----------
 
     var Store = Async.Store = function(options) {
+        if (!this.collectionClass) {
+            this.collectionClass = Async.Collection;
+        }
+
+        // Initialize collection instance
+        this.collection = new this.collectionClass();
+
+        if (this.modelClass) {
+            this.collection.model = this.modelClass;
+        } else if (this.collection.model) {
+            this.modelClass = this.collection.model;
+        } else {
+            // Set default Model class
+            this.modelClass = this.collection.model = Async.Model;
+        }
+
         this.options = options ? _.clone(options) : {};
         this.loaded = false;
-
-        if (!this.modelClass) {
-            throw new Error('No Model class defined');
-        }
-
-        if (!this.collectionClass) {
-            throw new Error('No Collection class defined');
-        }
-
-        this.collection = new this.collectionClass();
-        this.collection.model = this.modelClass;
         this.initialize.apply(this, arguments);
     };
 
@@ -341,10 +300,10 @@
         fetchById: function(id, options) {
             options = options || {};
 
-            var model = this.collection.get(id);
-            if (model) {
+            var found = this.collection.get(id);
+            if (found) {
                 return Promise.resolve({
-                    model: model,
+                    model: found,
                     options: options
                 });
             }
@@ -368,10 +327,8 @@
     });
 
     // Add proxy methods
-    var methods = ['reset', 'get', 'add', 'remove',
-        'shift', 'pop', 'push', 'unshift',
-        'where', 'findWhere', 'toJSON', 'sort',
-        'create', 'update', 'delete'];
+    var methods = ['reset', 'get', 'add', 'remove', 'shift', 'pop', 'push', 'unshift',
+        'where', 'findWhere', 'toJSON', 'sort', 'create', 'update', 'delete'];
 
     _.each(methods, function (method) {
         Store.prototype[method] = function () {

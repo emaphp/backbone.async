@@ -16,9 +16,8 @@ FIXTURES.Contacts = Backbone.Async.Collection.extend({
     model: FIXTURES.Contact
 });
 
-FIXTURES.ContactsStorage = Backbone.Async.Storage.extend({
-    Model: FIXTURES.Contact,
-    Collection: FIXTURES.Contacts
+FIXTURES.ContactsStore = Backbone.Async.Store.extend({
+    collectionClass: FIXTURES.Contacts
 });
 
 /**
@@ -34,7 +33,6 @@ FIXTURES.Notes = Backbone.Async.Collection.extend({
     model: FIXTURES.Note
 });
 
-FIXTURES.NotesStorage = Backbone.Async.Storage.extend({
-    Model: FIXTURES.Note,
-    Collection: FIXTURES.Notes
+FIXTURES.NotesStore = Backbone.Async.Store.extend({
+    collectionClass: FIXTURES.Notes
 });

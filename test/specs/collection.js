@@ -484,14 +484,14 @@ describe("ASync.Collection tests", function() {
                 ]
             );
 
-            var obj = _.extend({}, Backbone.Events);
-            var beforeCallback = sinon.spy(function() {});
+            var beforeCallback = sinon.spy();
             var afterCallback = sinon.spy();
             var successCallback = sinon.spy();
             var completeCallback = sinon.spy();
             var contacts = new FIXTURES.Contacts();
-            obj.listenTo(contacts, 'before:create', beforeCallback);
-            obj.listenTo(contacts, 'after:create', afterCallback);
+
+            contacts.on('before:create', beforeCallback);
+            contacts.on('after:create', afterCallback);
 
             contacts.create(value, {
                 test: true,
