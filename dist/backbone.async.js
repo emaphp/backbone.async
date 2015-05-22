@@ -282,46 +282,32 @@
     var Store = Async.Store = function(options) {
         this.options = options ? _.clone(options) : {};
         this.loaded = false;
+
+        if (!this.modelClass) {
+            throw new Error('No Model class defined');
+        }
+
+        if (!this.collectionClass) {
+            throw new Error('No Collection class defined');
+        }
+
+        this.collection = new this.collectionClass();
+        this.collection.model = this.modelClass;
         this.initialize.apply(this, arguments);
     };
 
-    // Returns an options object that overrides event handlers
-    var overrideEventCallbacks = function (store, event, options, onSuccess) {
+    // Returns an options object that overrides success event handler
+    var overrideSuccessCallback = function (store, options, onSuccess) {
         var success = options.success;
-        var error = options.error;
-        var complete = options.complete;
-        var afterArguments = ['after:' + event];
 
         return _.extend(options, {
             success: function (collection, response, options) {
                 if (onSuccess) {
-                    onSuccess();
+                    onSuccess.apply(store, arguments);
                 }
 
                 if (success) {
                     success(collection, response, options);
-                }
-
-                afterArguments = afterArguments.concat(_.toArray(arguments), [true]);
-            },
-
-            error: function (collection, response, options) {
-                if (error) {
-                    error(collection, response, options);
-                }
-
-                afterArguments = afterArguments.concat(_.toArray(arguments), [false]);
-            },
-
-            complete: function (response, status) {
-                var options = afterArguments[3];
-
-                if (!options.silent) {
-                    store.trigger.apply(store, afterArguments);
-                }
-
-                if (complete) {
-                    complete(response, status);
                 }
             }
         });
@@ -331,7 +317,7 @@
     _.extend(Store.prototype, Backbone.Events, {
         initialize: function(){},
 
-        // Fetchs a collection
+        // Fetch a collection
         fetchAll: function(options) {
             options = options || {};
             force = !!options.force;
@@ -344,84 +330,39 @@
                 });
             }
 
-            this._initCollection();
-
-            if (!options.silent) {
-                this.trigger('before:fetchAll', this.collection, options);
-            }
-
-            var onSuccess = (function() {
+            var onSuccess = function() {
                 this.loaded = true;
-            }).bind(this);
+            };
 
-            return this.collection.fetch(overrideEventCallbacks(this, 'fetchAll', options, onSuccess));
+            return this.collection.fetch(overrideSuccessCallback(this, options, onSuccess));
         },
 
         // Fetchs a model by ID
         fetchById: function(id, options) {
             options = options || {};
 
-            if (this.collection) {
-                var stored = this.collection.get(id);
-                if (stored) {
-                    return Promise.resolve({
-                        model: stored,
-                        options: options
-                    });
-                }
+            var model = this.collection.get(id);
+            if (model) {
+                return Promise.resolve({
+                    model: model,
+                    options: options
+                });
             }
-
-            if (!this.modelClass) {
-                throw new Error('No Model class defined');
-            }
-
-            this._initCollection();
 
             // Create model instance
             var model = new this.modelClass();
             model.set(this.modelClass.idAttribute || 'id', id);
 
-            if (!options.silent) {
-                this.trigger('before:fetchById', model, options);
-            }
-
-            var onSuccess = (function() {
+            var onSuccess = function() {
                 this.add(model);
-            }).bind(this);
+            };
 
-            return model.fetch(overrideEventCallbacks(this, 'fetchById', options, onSuccess));
-        },
-
-        // Wrapper for Async.Collection.create
-        create: function(attributes, options) {
-            if (!this.modelClass) {
-                throw new Error('No Model class defined');
-            }
-
-            this._initCollection();
-            options = options || {};
-            
-            if (!options.silent) {
-                this.trigger('before:create', this.collection, attributes, options);
-            }
-
-            return this.collection.create(attributes, overrideEventCallbacks(this, 'create', options));
+            return model.fetch(overrideSuccessCallback(this, options, onSuccess));
         },
 
         length: function () {
             if (this.collection) {
                 return this.collection.length;
-            }
-        },
-
-        // Initializes the internal collection instance
-        _initCollection: function() {
-            if (!this.collectionClass) {
-                throw new Error('No Collection class defined');
-            }
-
-            if (!this.collection) {
-                this.collection = new this.collectionClass();
             }
         }
     });
@@ -429,7 +370,8 @@
     // Add proxy methods
     var methods = ['reset', 'get', 'add', 'remove',
         'shift', 'pop', 'push', 'unshift',
-        'where', 'findWhere', 'toJSON', 'sort'];
+        'where', 'findWhere', 'toJSON', 'sort',
+        'create', 'update', 'delete'];
 
     _.each(methods, function (method) {
         Store.prototype[method] = function () {

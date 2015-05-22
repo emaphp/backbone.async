@@ -350,10 +350,33 @@ contacts.fetch()
 As a general rule, if an error is thrown during the execution of a method the event handler will call the *after* callback providing the error as first argument.
 
 <br/>
-###Storage
+###Event callbacks order
 
 <br/>
-The *Async.Storage* class provides an additional wrapper for Model and Collection classes.
+Callbacks are evaluated in the following order:
+
+ * before:*event*
+ * success / error
+ * after:*event*
+ * complete
+ * then / catch
+
+<br/>
+For example, when removing a model through *Async.Collection::delete* callbacks are invoked in the following order:
+
+ * before:delete
+ * before:destroy
+ * success / error
+ * after:destroy
+ * after:delete
+ * complete
+ * then / catch
+
+<br/>
+###Store
+
+<br/>
+The *Async.Store* class provides an additional wrapper for Model and Collection classes.
 
 ```javascript
 var Note = Backbone.Async.Model.extend({
@@ -365,31 +388,30 @@ var Notes = Backbone.Async.Collection.extend({
     model: Note
 });
 
-//extend the Storage class
-var NotesStore = Backbone.Async.Storage.extend({
-    Model: Note,
-    Collection: Notes
+var NotesStore = Backbone.Async.Store.extend({
+    modelClass: Note,
+    collectionClass: Notes
 });
 
-var storage = new NotesStore();
+var store = new NotesStore();
 ```
 
 <br/>
-**Fetch model**
+**Fetch model by ID**
 ```javascript
-//obtain model with ID 1
-storage.fetch(1, {foo: 'var'})
+// Fetchs a model by its ID
+store.fetchById(1, {foo: 'var'})
 .then(function(data) {
-    var note = storage.get(1); //storage.collection.get(1)
+    // 'fetchById' returns a resolved promise if the model was alreay loaded
+    var note = store.get(1); //storage.collection.get(1)
     
-    //if model was already loaded then 'fetch' returns a resolved promise
-    //if a request was made then the property 'response' is available
-    if (data.response) {
-        console.log('A request has been made');
+    // The 'response' property will only be available when a request is made
+    if (!data.response) {
+        console.log('No request was made');
     }
 })
 .catch(function(data) {
-    if (_.isError(data_or_err)) {
+    if (_.isError(data)) {
         console.error(data);
     } else {
         console.log('Error:', data.response.statusText);
@@ -401,18 +423,16 @@ storage.fetch(1, {foo: 'var'})
 **Fetch collection**
 
 ```javascript
-//fetch all models
-storage.fetchAll({foo: 'var'})
+// Fetch all models
+store.fetchAll({foo: 'var'})
 .then(function(data) {
     storage.loaded; //returns true
     
-    //get collection
-    var collection = storage.collection; //or data.collection
+    // Get collection
+    var collection = store.collection; //or data.collection
     
-    //same response rule applies to 'fetchAll'    
-    if (data.response) {
-        console.log('A request has been made');
-    }
+    // Count models
+    console.log('Models loaded:', store.length());
 })
 .catch(function(data) {
     if (_.isError(data)) {
@@ -424,67 +444,7 @@ storage.fetchAll({foo: 'var'})
 ```
 
 <br/>
-**Storing models**
-```javascript
-var note = new Note({message: 'Hello'});
-
-//save model
-note.save()
-.then(function(data) {
-    storage.store(model);
-})
-.catch(function(data) {
-    if (_.isError(data)) {
-        console.error(data);
-    } else {
-        console.log('Failed to save model:', data.response.statusText);
-    }
-});
-```
-
-<br/>
-**Creating models**
-```javascript
-var model = {name: 'emaphp', email: 'emaphp@github.com'};
-
-storage.create(model, {foo: 'bar'})
-.then(function(data) {
-    //...
-})
-.catch(function(data) {
-    if (_.isError(data)) {
-    } else {
-        console.log('Failed to save model:', data.response.statusText);
-    }
-});
-```
-
-<br/>
-#####Storage events
-
-<br/>
-**before:fetch**
-> Arguments: *Async.Model* ***model***, *object* ***options***
-
-<br/>
-**after:fetch**
-> Arguments: *Async.Model* ***model***, *object* ***response***, *object* ***options***, *boolean* ***success***
-
-<br/>
-**before:fetchAll**
-> Arguments: *Async.Collection* ***collection***, *object* ***options***
-
-<br/>
-**after:fetchAll**
-> Arguments: *Async.Collection* ***collection***, *object* ***response***, *object* ***options***, *boolean* ***success***
-
-<br/>
-**before:create**
-> Arguments: *Async.Collection* ***collection***, *object* ***attributes***, *object* ***options***
-
-<br/>
-**after:create**
-> Arguments: *Async.Model* ***model***, *object* ***response***, *object* ***options***, *boolean* ***success***
+Addtional proxy methods: *reset*, *get*, *add*, *remove*, *shift*, *pop*, *push*, *unshift*, *where*, *findWhere*, *toJSON*, *sort*, *create*, *update*, *delete*.
 
 <br/>
 ###License
