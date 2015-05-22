@@ -266,6 +266,8 @@ contacts.delete(contact, {
 <br/>
 *Backbone.Async* adds additional before/after events when synchronizing a Model or Collection.
 
+
+<br/>
 #####Async Model events
 
 <br/>
@@ -397,7 +399,7 @@ Wrapper methods like *Async.Collection::update* and *Async.Collection::delete* b
  * then / catch
 
 <br/>
-###Store
+###Backbone.Async.Store
 
 <br/>
 The *Async.Store* class provides an additional wrapper for Model and Collection classes.
