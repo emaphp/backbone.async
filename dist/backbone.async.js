@@ -1,6 +1,6 @@
 //
-// Backbone.Async v1.3.0
-// Copyright 2015 Emmanuel Antico
+// Backbone.Async v1.4.0
+// Copyright 2015 - 2016 Emmanuel Antico
 // This library is distributed under the terms of the MIT license.
 //
 (function(global, factory) {
@@ -14,7 +14,7 @@
         factory(global, global.Backbone, global._);
     }
 }(this, function(global, Backbone, _) {
-    
+
     //
     // Helpers
     // -------
@@ -69,7 +69,7 @@
                 var attrs = parsed.attrs;
                 var success = options.success;
                 var error = options.error;
-                
+
                 var buildOptions = function (success) {
                     return {
                         method: method,
@@ -118,7 +118,7 @@
     // ---------
 
     var Async = Backbone.Async = Backbone.Async || {};
-    Async.VERSION = '1.3.0';
+    Async.VERSION = '1.4.0';
     Async.extend = Backbone.Model.extend;
 
     //
@@ -186,7 +186,7 @@
             if (!options.silent) {
                 this.trigger('before:create', this, model, options);
             }
-            
+
             if (!(model = this._prepareModel(model, options))) {
                 return false;
             }
@@ -332,9 +332,58 @@
 
     _.each(methods, function (method) {
         Store.prototype[method] = function () {
-            return this.collection[method].apply(this.collection, arguments);
+            if (_.isFunction(this.collection[method])) {
+                return this.collection[method].apply(this.collection, arguments);
+            }
         };
     });
+
+    // Add Collection methods
+    var cb = function(iteratee, instance) {
+        if (_.isFunction(iteratee)) return iteratee;
+        if (_.isObject(iteratee) && !instance.collection._isModel(iteratee)) return modelMatcher(iteratee);
+        if (_.isString(iteratee)) return function(model) { return model.get(iteratee); };
+        return iteratee;
+    };
+    var modelMatcher = function(attrs) {
+        var matcher = _.matches(attrs);
+        return function(model) {
+            return matcher(model.attributes);
+        };
+    };
+    var addMethod = function(length, method) {
+        switch (length) {
+        case 1: return function() {
+            return _[method](this.collection.models);
+        };
+        case 3: return function(iteratee, context) {
+            return _[method](this.collection.models, cb(iteratee, this), context);
+        };
+        default: return function() {
+            var args = Array.prototype.slice.call(arguments);
+            args.unshift(this.collection.models);
+            return _[method].apply(_, args);
+        };
+        }
+    };
+    var addCollectionMethods = function(Class, methods) {
+        _.each(methods, function(length, method) {
+            if (_[method]) {
+                Class.prototype[method] = addMethod(length, method);
+            }
+        });
+    };
+
+    var collectionMethods = {forEach: 3, each: 3, map: 3, collect: 3, reduce: 0,
+                             foldl: 0, inject: 0, reduceRight: 0, foldr: 0, find: 3, detect: 3, filter: 3,
+                             select: 3, reject: 3, every: 3, all: 3, some: 3, any: 3, include: 3, includes: 3,
+                             contains: 3, invoke: 0, max: 3, min: 3, toArray: 1, size: 1, first: 3,
+                             head: 3, take: 3, initial: 3, rest: 3, tail: 3, drop: 3, last: 3,
+                             without: 0, difference: 0, indexOf: 3, shuffle: 1, lastIndexOf: 3,
+                             isEmpty: 1, chain: 1, sample: 3, partition: 3, groupBy: 3, countBy: 3,
+                             sortBy: 3, indexBy: 3, findIndex: 3, findLastIndex: 3};
+
+    addCollectionMethods(Store, collectionMethods);
 
     // Make Store class extendable
     Store.extend = Backbone.Model.extend;
