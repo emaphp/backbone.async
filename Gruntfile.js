@@ -37,8 +37,8 @@ module.exports = function(grunt) {
             },
 
             promise: {
-                src: 'node_modules/promise-polyfill/Promise.js',
-                dest: 'test/lib/Promise.js'
+                src: 'node_modules/promise-polyfill/promise.js',
+                dest: 'test/lib/promise.js'
             }
         },
 
