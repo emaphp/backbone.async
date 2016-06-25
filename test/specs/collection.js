@@ -65,7 +65,7 @@ describe("ASync.Collection tests", function() {
 
         it('must call callbacks in order', function(done) {
             var values = [{id: 1}, {id: 2}, {id: 3}];
-            
+
             server.respondWith(
                 'GET',
                 '/contacts',
@@ -100,7 +100,7 @@ describe("ASync.Collection tests", function() {
                 expect(completeCallback.called).to.be.true;
                 expect(completeCallback.calledOnce).to.be.true;
                 expect(successCallback.calledBefore(completeCallback)).to.be.true;
-                
+
                 expect(successCallback.calledBefore(completeCallback)).to.be.true;
                 expect(completeCallback.calledBefore(callback1)).to.be.true;
 
@@ -113,7 +113,7 @@ describe("ASync.Collection tests", function() {
                 expect(firstArg.status).to.equal(200);
                 var secondArg = completeCallback.args[0][1];
                 expect(secondArg).to.equal('success');
-                
+
                 done();
             })
             .catch(function(err) { done(err); });
@@ -269,7 +269,7 @@ describe("ASync.Collection tests", function() {
             })
             .catch(function(data) {
                 expect(data).to.be.a('object');
-                
+
                 expect(data).to.have.property('collection');
                 expect(data).to.have.property('response');
                 expect(data).to.have.property('options');
@@ -1343,7 +1343,7 @@ describe("ASync.Collection tests", function() {
                 expect(data).to.have.property('model');
                 expect(data).to.have.property('response');
                 expect(data).to.have.property('options');
-                
+
                 expect(data.model).to.deep.equal(note);
                 expect(data.response.status).to.equal(500);
                 expect(data.options.test).to.be.true;

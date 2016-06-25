@@ -133,7 +133,7 @@ describe("ASync.Model tests", function() {
             .then(function(data) {
                 expect(beforeCallback.called).to.be.true;
                 expect(afterCallback.called).to.be.true;
-                
+
                 expect(beforeCallback.calledBefore(successCallback)).to.be.true;
                 expect(successCallback.calledBefore(afterCallback)).to.be.true;
                 expect(afterCallback.calledBefore(completeCallback)).to.be.true;
@@ -180,12 +180,12 @@ describe("ASync.Model tests", function() {
                 expect(completeResponse.status).to.equal(200);
                 var completeStatus = completeCallback.args[0][1];
                 expect(completeStatus).to.equal('success');
-                
+
                 done();
             })
             .catch(function(err) { done(err); });
 
-            server.respond();   
+            server.respond();
         });
 
         it('must not call event handlers', function(done) {
@@ -380,7 +380,7 @@ describe("ASync.Model tests", function() {
             );
 
             var note = new FIXTURES.Note({id: 5});
-            
+
             note.fetch()
             .then(function(data) {
                 throw new Error();
@@ -412,7 +412,7 @@ describe("ASync.Model tests", function() {
             contact.save(null, {test: true, silent: false})
             .then(function(data) {
                 expect(data).to.be.a('object');
-                
+
                 expect(data).to.have.property('model');
                 expect(data).to.have.property('response');
                 expect(data).to.have.property('options');
@@ -550,12 +550,12 @@ describe("ASync.Model tests", function() {
                 expect(completeResponse.status).to.equal(200);
                 var completeStatus = completeCallback.args[0][1];
                 expect(completeStatus).to.equal('success'); 
-                
+
                 done();
             })
             .catch(function(err) { done(err); });
 
-            server.respond();   
+            server.respond();
         });
 
         it('must match attrs', function(done) {
@@ -583,7 +583,7 @@ describe("ASync.Model tests", function() {
             })
             .catch(function(err) { done(err); });
 
-            server.respond();   
+            server.respond();
         });
 
         it('must not call event handlers', function(done) {
@@ -637,7 +637,7 @@ describe("ASync.Model tests", function() {
             })
             .catch(function(data) {
                 expect(data).to.be.a('object');
-                
+
                 expect(data).to.have.property('model');
                 expect(data).to.have.property('response');
                 expect(data).to.have.property('options');
@@ -732,7 +732,7 @@ describe("ASync.Model tests", function() {
 
                 var success = afterCallback.args[0][3];
                 expect(success).to.be.false;
-                
+
                 var errorModel = errorCallback.args[0][0];
                 expect(errorModel).to.deep.equal(note);
                 var errorResponse = errorCallback.args[0][1];
@@ -909,7 +909,7 @@ describe("ASync.Model tests", function() {
             .then(function(data) {
                 expect(beforeCallback.called).to.be.true;
                 expect(afterCallback.called).to.be.true;
-                
+
                 expect(beforeCallback.calledBefore(successCallback)).to.be.true;
                 expect(successCallback.calledBefore(afterCallback)).to.be.true;
                 expect(afterCallback.calledBefore(completeCallback)).to.be.true;
@@ -946,7 +946,7 @@ describe("ASync.Model tests", function() {
                 var successOptions = successCallback.args[0][2];
                 expect(successOptions.test).to.be.true;
                 expect(successOptions.silent).to.be.false;
-                
+
                 var completeResponse = completeCallback.args[0][0];
                 expect(completeResponse.status).to.equal(204);
                 var completeStatus = completeCallback.args[0][1];
@@ -956,7 +956,7 @@ describe("ASync.Model tests", function() {
             })
             .catch(function(err) { done(err); });
 
-            server.respond();   
+            server.respond();
         });
 
         it('must not call event handlers', function(done) {
@@ -1000,7 +1000,7 @@ describe("ASync.Model tests", function() {
             );
 
             var contact = new FIXTURES.Contact({id: 5});
-            
+
             contact.destroy()
             .then(function(data) {
                 throw new Error();
@@ -1033,7 +1033,7 @@ describe("ASync.Model tests", function() {
             })
             .catch(function(data) {
                 expect(data).to.be.a('object');
-                
+
                 expect(data).to.have.property('model');
                 expect(data).to.have.property('response');
                 expect(data).to.have.property('options');
@@ -1123,7 +1123,7 @@ describe("ASync.Model tests", function() {
 
                 var success = afterCallback.args[0][3];
                 expect(success).to.be.false;
-                
+
                 var errorModel = errorCallback.args[0][0];
                 expect(errorModel).to.deep.equal(note);
                 var errorResponse = errorCallback.args[0][1];
